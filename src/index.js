@@ -2,76 +2,101 @@ import "./style.css";
 import { db } from "./db.js";
 import { ViewManager } from "./views.js";
 
-// Инициализация менеджера видов
-const viewManager = new ViewManager();
-
-// DOM загрузился, можно начинать безобразие
+// Инициализация приложения
 document.addEventListener("DOMContentLoaded", () => {
-  // Находим форму и поля
+  console.log("Архив Потраченного Времени запускается...");
+
+  // Инициализируем менеджер видов
+  const viewManager = new ViewManager();
+
+  // Инициализируем форму добавления записей
+  initializeNoteForm(viewManager);
+
+  // Устанавливаем активную вкладку по умолчанию
+  viewManager.switchView("today");
+
+  console.log("Приложение готово к использованию");
+});
+
+// Инициализация формы добавления записей
+function initializeNoteForm(viewManager) {
   const noteForm = document.getElementById("new-note-form");
   const noteContentField = document.getElementById("note-content");
   const noteTagsField = document.getElementById("note-tags");
   const saveButton = document.getElementById("save-note-btn");
+
+  if (!noteForm) {
+    console.error("Форма добавления записей не найдена!");
+    return;
+  }
+
   // Обработчик отправки формы
   noteForm.addEventListener("submit", async (event) => {
-    // Отменяем стандартную отправку формы, нам не нужна перезагрузка страницы
     event.preventDefault();
 
-    // Забираем данные из полей
     const content = noteContentField.value.trim();
     const tagsInput = noteTagsField.value.trim();
 
-    // Валидация: пустой контент = нахуй иди
+    // Валидация
     if (!content) {
       alert(
-        "Ты че, думаешь пустые записи кому-то нужны? Напиши хоть что-нибудь."
+        "Эй, мудила! Пустые записи никому не нужны. Напиши хоть что-нибудь осмысленное."
       );
       noteContentField.focus();
       return;
     }
 
-    // Обрабатываем теги: разделяем по запятым, чистим от пробелов и мусора
+    // Парсинг тегов
     let tags = [];
     if (tagsInput) {
       tags = tagsInput
         .split(",")
         .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0) // Убираем пустые теги
-        .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`)); // Добавляем # если забыл
+        .filter((tag) => tag.length > 0)
+        .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
     }
 
     try {
-      // Блокируем кнопку, чтобы дурак не нажимал дважды
-      saveButton.disabled = true;
-      saveButton.textContent = "Сохраняю...";
+      // Блокируем форму во время сохранения
+      setFormState(false, "Сохраняю твои страдания...");
 
       // Сохраняем в базу
-      await db.addNote(content, tags);
+      const noteId = await db.addNote(content, tags);
 
-      // Успех! Очищаем форму
+      console.log(`Запись сохранена с ID: ${noteId}`);
+
+      // Очищаем форму
       noteContentField.value = "";
       noteTagsField.value = "";
 
-      // Показываем успешное сохранение (временно)
-      saveButton.textContent = "Сохранено!";
+      // Показываем успех
+      setFormState(true, "Сохранено!");
       setTimeout(() => {
-        saveButton.textContent = "Сохранить и страдать дальше";
+        setFormState(true, "Сохранить и страдать дальше");
       }, 2000);
 
-      // Фокус обратно на textarea для следующей записи
+      // Фокус для следующей записи
       noteContentField.focus();
 
-      // Используем менеджер видов для обновления
-      await viewManager.updateRecentNotes();
+      // Обновляем отображение записей
+      await viewManager.updateCurrentView();
     } catch (error) {
       console.error("Ошибка при сохранении записи:", error);
-      alert("Что-то пошло не так при сохранении. Проверь консоль, там детали.");
-    } finally {
-      // Разблокируем кнопку в любом случае
-      saveButton.disabled = false;
+      alert(
+        "Что-то пошло не так. Твои страдания не сохранились. Проверь консоль."
+      );
+      setFormState(true);
     }
   });
 
-  // Фокус на форму сразу при загрузке - удобно для быстрого ввода
+  // Автофокус на форму при загрузке
   noteContentField.focus();
-});
+
+  // Вспомогательная функция для управления состоянием формы
+  function setFormState(enabled, buttonText = "Сохранить и страдать дальше") {
+    saveButton.disabled = !enabled;
+    saveButton.textContent = buttonText;
+    noteContentField.disabled = !enabled;
+    noteTagsField.disabled = !enabled;
+  }
+}

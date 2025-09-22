@@ -212,6 +212,14 @@ export class ViewManager {
     container.innerHTML = `
       <div class="notes-header">
         <h4>Последние записи (${notes.length})</h4>
+        <div class="export-buttons-group">
+          <button class="export-button compact" id="export-today-btn" title="Скопировать записи за сегодня">
+            📋 Копировать
+          </button>
+          <button class="download-button compact" id="download-today-btn" title="Скачать записи за сегодня как .txt">
+            📥 Скачать
+          </button>
+        </div>
       </div>
       <div class="notes-list">
         ${notesHTML}
@@ -219,6 +227,36 @@ export class ViewManager {
     `;
 
     console.log(`Отображено ${notes.length} записей`);
+
+    // Обработчик для копирования
+    const exportTodayBtn = document.getElementById("export-today-btn");
+    if (exportTodayBtn) {
+      exportTodayBtn.addEventListener("click", async () => {
+        exportTodayBtn.disabled = true;
+        exportTodayBtn.textContent = "⏳";
+
+        const result = await this.exportTodayNotes();
+        this.showExportNotification(result, false);
+
+        exportTodayBtn.disabled = false;
+        exportTodayBtn.textContent = "📋 Копировать";
+      });
+    }
+
+    // Обработчик для скачивания
+    const downloadTodayBtn = document.getElementById("download-today-btn");
+    if (downloadTodayBtn) {
+      downloadTodayBtn.addEventListener("click", async () => {
+        downloadTodayBtn.disabled = true;
+        downloadTodayBtn.textContent = "⏳";
+
+        const result = await this.downloadTodayNotes();
+        this.showExportNotification(result, true);
+
+        downloadTodayBtn.disabled = false;
+        downloadTodayBtn.textContent = "📥 Скачать";
+      });
+    }
   }
 
   // Показ записей за вчера (дополнительно)
@@ -312,7 +350,6 @@ export class ViewManager {
       console.error("Контейнеры для недельного вида не найдены!");
       return;
     }
-
     const endDate = new Date(this.currentWeekStart);
     endDate.setDate(endDate.getDate() + 6);
 
@@ -345,7 +382,6 @@ export class ViewManager {
       .map((day) => {
         const dateKey = day.date.toDateString();
         const dayNotes = notesByDay[dateKey] || [];
-
         return `
           <div class="week-day ${dayNotes.length > 0 ? "has-notes" : ""}">
             <div class="day-header">
@@ -375,13 +411,53 @@ export class ViewManager {
       .join("");
 
     container.innerHTML = `
-      <div class="week-grid">
-        ${weekHTML}
+    <div class="week-controls">
+      <div class="export-buttons-group">
+        <button class="export-button" id="export-week-btn" title="Скопировать все записи за неделю в буфер обмена">
+          📋 Скопировать записи (${notes.length})
+        </button>
+        <button class="download-button" id="download-week-btn" title="Скачать все записи за неделю как .txt файл">
+          📥 Скачать .txt (${notes.length})
+        </button>
       </div>
-      <div class="week-summary">
-        <p>Всего записей за неделю: <strong>${notes.length}</strong></p>
-      </div>
-    `;
+    </div>
+    <div class="week-grid">
+      ${weekHTML}
+    </div>
+    <div class="week-summary">
+      <p>Всего записей за неделю: <strong>${notes.length}</strong></p>
+      <p>Активных дней: <strong>${Object.keys(notesByDay).length}</strong></p>
+    </div>
+  `;
+
+    // Обработчики для кнопок
+    const exportBtn = document.getElementById("export-week-btn");
+    if (exportBtn) {
+      exportBtn.addEventListener("click", async () => {
+        exportBtn.disabled = true;
+        exportBtn.textContent = "⏳ Копирование...";
+
+        const result = await this.exportWeekNotes();
+        this.showExportNotification(result, false);
+
+        exportBtn.disabled = false;
+        exportBtn.textContent = `📋 Скопировать записи (${notes.length})`;
+      });
+    }
+
+    const downloadBtn = document.getElementById("download-week-btn");
+    if (downloadBtn) {
+      downloadBtn.addEventListener("click", async () => {
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = "⏳ Скачивание...";
+
+        const result = await this.downloadWeekNotes();
+        this.showExportNotification(result, true);
+
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = `📥 Скачать .txt (${notes.length})`;
+      });
+    }
   }
 
   // === ВИД "МЕСЯЦ" ===
@@ -409,7 +485,6 @@ export class ViewManager {
       console.error("Контейнеры для месячного вида не найдены!");
       return;
     }
-
     const monthNames = [
       "Январь",
       "Февраль",
@@ -441,9 +516,23 @@ export class ViewManager {
       notesByDay[day].push(note);
     });
 
+    const monthControlsHTML = `
+    <div class="month-controls">
+      <div class="export-buttons-group">
+        <button class="export-button" id="export-month-btn" title="Скопировать все записи за месяц в буфер обмена">
+          📋 Экспорт месяца (${notes.length})
+        </button>
+        <button class="download-button" id="download-month-btn" title="Скачать все записи за месяц как .txt файл">
+          📥 Скачать .txt (${notes.length})
+        </button>
+      </div>
+    </div>
+  `;
+
+    container.parentElement.insertAdjacentHTML("afterbegin", monthControlsHTML);
+
     container.innerHTML = "";
     container.className = "month-calendar-grid";
-
     // Заголовки дней недели
     const dayHeaders = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
     dayHeaders.forEach((dayName) => {
@@ -508,6 +597,36 @@ export class ViewManager {
 
       container.appendChild(dayElement);
     }
+
+    // Обработчики для кнопок экспорта и скачивания
+    const exportMonthBtn = document.getElementById("export-month-btn");
+    const downloadMonthBtn = document.getElementById("download-month-btn");
+
+    if (exportMonthBtn) {
+      exportMonthBtn.addEventListener("click", async () => {
+        exportMonthBtn.disabled = true;
+        exportMonthBtn.textContent = "⏳ Экспортируем...";
+
+        const result = await this.exportMonthNotes();
+        this.showExportNotification(result, false);
+
+        exportMonthBtn.disabled = false;
+        exportMonthBtn.textContent = `📋 Экспорт месяца (${notes.length})`;
+      });
+    }
+
+    if (downloadMonthBtn) {
+      downloadMonthBtn.addEventListener("click", async () => {
+        downloadMonthBtn.disabled = true;
+        downloadMonthBtn.textContent = "⏳ Скачиваем...";
+
+        const result = await this.downloadMonthNotes();
+        this.showExportNotification(result, true);
+
+        downloadMonthBtn.disabled = false;
+        downloadMonthBtn.textContent = `📥 Скачать .txt (${notes.length})`;
+      });
+    }
   }
 
   // === ВИД "ГОД" ===
@@ -537,6 +656,21 @@ export class ViewManager {
     }
 
     title.textContent = `Годовой архив страданий — ${this.currentYear}`;
+
+    const yearControlsHTML = `
+    <div class="year-controls">
+      <div class="export-buttons-group">
+        <button class="export-button" id="export-year-btn" title="Скопировать все записи за год в буфер обмена">
+          📋 Экспорт года (${stats.totalNotes})
+        </button>
+        <button class="download-button" id="download-year-btn" title="Скачать все записи за год как .txt файл">
+          📥 Скачать .txt (${stats.totalNotes})
+        </button>
+      </div>
+    </div>
+  `;
+
+    container.parentElement.insertAdjacentHTML("afterbegin", yearControlsHTML);
 
     container.innerHTML = "";
     container.className = "year-calendar-grid";
@@ -595,6 +729,36 @@ export class ViewManager {
 
       container.appendChild(monthElement);
     });
+
+    // Обработчики для кнопок года
+    const exportYearBtn = document.getElementById("export-year-btn");
+    const downloadYearBtn = document.getElementById("download-year-btn");
+
+    if (exportYearBtn) {
+      exportYearBtn.addEventListener("click", async () => {
+        exportYearBtn.disabled = true;
+        exportYearBtn.textContent = "⏳ Собираем архив...";
+
+        const result = await this.exportYearNotes();
+        this.showExportNotification(result, false);
+
+        exportYearBtn.disabled = false;
+        exportYearBtn.textContent = `📋 Экспорт года (${stats.totalNotes})`;
+      });
+    }
+
+    if (downloadYearBtn) {
+      downloadYearBtn.addEventListener("click", async () => {
+        downloadYearBtn.disabled = true;
+        downloadYearBtn.textContent = "⏳ Создаём архив...";
+
+        const result = await this.downloadYearNotes();
+        this.showExportNotification(result, true);
+
+        downloadYearBtn.disabled = false;
+        downloadYearBtn.textContent = `📥 Скачать .txt (${stats.totalNotes})`;
+      });
+    }
   }
 
   // === ПОИСК ===
@@ -987,6 +1151,478 @@ export class ViewManager {
   // Экранирование регулярных выражений
   escapeRegex(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  // === МЕТОДЫ ЭКСПОРТА И КОПИРОВАНИЯ ===
+
+  // Универсальная функция копирования в буфер обмена с fallback
+  async copyToClipboard(text) {
+    try {
+      // Проверяем поддержку современного API [web:62]
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return { success: true, method: "modern" };
+      }
+
+      // Fallback для старых браузеров [web:64]
+      if (
+        document.queryCommandSupported &&
+        document.queryCommandSupported("copy")
+      ) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        textarea.style.top = "-9999px";
+        document.body.appendChild(textarea);
+
+        textarea.focus();
+        textarea.select();
+
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textarea);
+
+        if (successful) {
+          return { success: true, method: "fallback" };
+        }
+      }
+
+      throw new Error("Clipboard API не поддерживается в этом браузере");
+    } catch (error) {
+      console.error("Ошибка копирования:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Форматирование записей для экспорта
+  formatNotesForExport(notes, period = "") {
+    if (!notes || notes.length === 0) {
+      return `📋 Архив Потраченного Времени ${period}\n\nЗаписей не найдено.`;
+    }
+
+    const header =
+      `📋 Архив Потраченного Времени ${period}\n` +
+      `Экспортировано: ${new Date().toLocaleString("ru-RU")}\n` +
+      `Всего записей: ${notes.length}\n` +
+      `${"=".repeat(50)}\n\n`;
+
+    // Группируем записи по дням
+    const notesByDay = this.groupNotesByDay(notes);
+
+    let formattedText = header;
+
+    // Сортируем дни по дате (новые первыми)
+    const sortedDays = Object.keys(notesByDay).sort(
+      (a, b) => new Date(b) - new Date(a)
+    );
+
+    sortedDays.forEach((dayString, dayIndex) => {
+      const dayNotes = notesByDay[dayString];
+      const date = new Date(dayString);
+
+      // Форматируем заголовок дня
+      const dayHeader = `📅 ${date.toLocaleDateString("ru-RU", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })} (${dayNotes.length} записей)`;
+
+      formattedText += `${dayHeader}\n${"-".repeat(40)}\n`;
+
+      // Сортируем записи дня по времени
+      const sortedNotes = dayNotes.sort(
+        (a, b) => new Date(a.date) - new Date(b.date)
+      );
+
+      sortedNotes.forEach((note, noteIndex) => {
+        const time = note.date.toLocaleTimeString("ru-RU", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const tags = note.tags.length > 0 ? ` ${note.tags.join(" ")}` : "";
+
+        formattedText += `${noteIndex + 1}. [${time}] ${note.content}${tags}\n`;
+      });
+
+      formattedText += "\n";
+    });
+
+    const footer =
+      `${"=".repeat(50)}\n` +
+      `Создано в Архиве Потраченного Времени\n` +
+      `Всего дней с записями: ${sortedDays.length}\n` +
+      `Общее количество записей: ${notes.length}`;
+
+    formattedText += footer;
+
+    return formattedText;
+  }
+
+  // Экспорт записей за сегодня
+  async exportTodayNotes() {
+    try {
+      const notes = await db.getTodayNotes();
+      const today = new Date().toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const exportText = this.formatNotesForExport(notes, `- ${today}`);
+      const result = await this.copyToClipboard(exportText);
+
+      return {
+        success: result.success,
+        count: notes.length,
+        period: "сегодня",
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка экспорта записей за сегодня:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Экспорт записей за неделю
+  async exportWeekNotes() {
+    try {
+      if (!this.currentWeekStart) {
+        this.currentWeekStart = this.getWeekStart(new Date());
+      }
+
+      const notes = await db.getWeekNotes(this.currentWeekStart);
+      const endDate = new Date(this.currentWeekStart);
+      endDate.setDate(endDate.getDate() + 6);
+
+      const weekPeriod = `- Неделя с ${this.currentWeekStart.toLocaleDateString(
+        "ru-RU"
+      )} по ${endDate.toLocaleDateString("ru-RU")}`;
+      const exportText = this.formatNotesForExport(notes, weekPeriod);
+      const result = await this.copyToClipboard(exportText);
+
+      return {
+        success: result.success,
+        count: notes.length,
+        period: "неделю",
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка экспорта записей за неделю:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Экспорт записей за месяц
+  async exportMonthNotes() {
+    try {
+      const notes = await db.getMonthNotes(this.currentYear, this.currentMonth);
+
+      const monthNames = [
+        "январь",
+        "февраль",
+        "март",
+        "апрель",
+        "май",
+        "июнь",
+        "июль",
+        "август",
+        "сентябрь",
+        "октябрь",
+        "ноябрь",
+        "декабрь",
+      ];
+
+      const monthPeriod = `- ${monthNames[this.currentMonth]} ${
+        this.currentYear
+      }`;
+      const exportText = this.formatNotesForExport(notes, monthPeriod);
+      const result = await this.copyToClipboard(exportText);
+
+      return {
+        success: result.success,
+        count: notes.length,
+        period: "месяц",
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка экспорта записей за месяц:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Экспорт записей за год
+  async exportYearNotes() {
+    try {
+      const stats = await db.getNotesStats(this.currentYear);
+      const yearPeriod = `- ${this.currentYear} год`;
+
+      const exportText = this.formatNotesForExport(stats.allNotes, yearPeriod);
+      const result = await this.copyToClipboard(exportText);
+
+      return {
+        success: result.success,
+        count: stats.totalNotes,
+        period: "год",
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка экспорта записей за год:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // === МЕТОДЫ СКАЧИВАНИЯ ФАЙЛОВ ===
+
+  // Универсальная функция для скачивания Blob как файла [web:76]
+  downloadBlob(blob, filename) {
+    try {
+      // Создаём URL для Blob объекта [web:73]
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Создаём временную ссылку для скачивания
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+
+      // Скрываем ссылку
+      link.style.display = "none";
+
+      // Добавляем в DOM, кликаем и удаляем
+      document.body.appendChild(link);
+
+      // Используем dispatchEvent для лучшей совместимости [web:76]
+      link.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        })
+      );
+
+      document.body.removeChild(link);
+
+      // Освобождаем память через небольшую задержку [web:77]
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+
+      return { success: true };
+    } catch (error) {
+      console.error("Ошибка скачивания файла:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Генерация имени файла для отчёта
+  generateReportFilename(period, notes) {
+    const now = new Date();
+    const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+    const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
+
+    let periodStr = period.replace(/\s+/g, "_").replace(/[^\w\-_]/g, "");
+    if (periodStr) {
+      periodStr = `_${periodStr}`;
+    }
+
+    return `archive_report${periodStr}_${dateStr}_${timeStr}.txt`;
+  }
+
+  // Скачивание записей за сегодня как .txt файла
+  async downloadTodayNotes() {
+    try {
+      const notes = await db.getTodayNotes();
+      const today = new Date().toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const reportText = this.formatNotesForExport(notes, `- ${today}`);
+      const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
+      const filename = this.generateReportFilename("сегодня", notes);
+
+      const result = this.downloadBlob(blob, filename);
+
+      return {
+        success: result.success,
+        count: notes.length,
+        period: "сегодня",
+        filename: filename,
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка скачивания записей за сегодня:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Скачивание записей за неделю как .txt файла
+  async downloadWeekNotes() {
+    try {
+      if (!this.currentWeekStart) {
+        this.currentWeekStart = this.getWeekStart(new Date());
+      }
+
+      const notes = await db.getWeekNotes(this.currentWeekStart);
+      const endDate = new Date(this.currentWeekStart);
+      endDate.setDate(endDate.getDate() + 6);
+
+      const weekPeriod = `- Неделя с ${this.currentWeekStart.toLocaleDateString(
+        "ru-RU"
+      )} по ${endDate.toLocaleDateString("ru-RU")}`;
+      const reportText = this.formatNotesForExport(notes, weekPeriod);
+      const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
+      const filename = this.generateReportFilename("неделя", notes);
+
+      const result = this.downloadBlob(blob, filename);
+
+      return {
+        success: result.success,
+        count: notes.length,
+        period: "неделю",
+        filename: filename,
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка скачивания записей за неделю:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Скачивание записей за месяц как .txt файла
+  async downloadMonthNotes() {
+    try {
+      const notes = await db.getMonthNotes(this.currentYear, this.currentMonth);
+
+      const monthNames = [
+        "январь",
+        "февраль",
+        "март",
+        "апрель",
+        "май",
+        "июнь",
+        "июль",
+        "август",
+        "сентябрь",
+        "октябрь",
+        "ноябрь",
+        "декабрь",
+      ];
+
+      const monthPeriod = `- ${monthNames[this.currentMonth]} ${
+        this.currentYear
+      }`;
+      const reportText = this.formatNotesForExport(notes, monthPeriod);
+      const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
+      const filename = this.generateReportFilename(
+        `${monthNames[this.currentMonth]}_${this.currentYear}`,
+        notes
+      );
+
+      const result = this.downloadBlob(blob, filename);
+
+      return {
+        success: result.success,
+        count: notes.length,
+        period: "месяц",
+        filename: filename,
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка скачивания записей за месяц:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Скачивание записей за год как .txt файла
+  async downloadYearNotes() {
+    try {
+      const stats = await db.getNotesStats(this.currentYear);
+      const yearPeriod = `- ${this.currentYear} год`;
+
+      const reportText = this.formatNotesForExport(stats.allNotes, yearPeriod);
+      const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
+      const filename = this.generateReportFilename(
+        `${this.currentYear}_год`,
+        stats.allNotes
+      );
+
+      const result = this.downloadBlob(blob, filename);
+
+      return {
+        success: result.success,
+        count: stats.totalNotes,
+        period: "год",
+        filename: filename,
+        error: result.error,
+      };
+    } catch (error) {
+      console.error("Ошибка скачивания записей за год:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Обновлённая функция показа уведомлений с поддержкой скачивания
+  showExportNotification(result, isDownload = false) {
+    const { success, count, period, filename, error } = result;
+
+    const notification = document.createElement("div");
+    notification.className = `export-notification ${
+      success ? "success" : "error"
+    }`;
+
+    if (success) {
+      notification.innerHTML = `
+      <div class="notification-content">
+        <span class="notification-icon">${isDownload ? "📥" : "✅"}</span>
+        <div class="notification-text">
+          <strong>${isDownload ? "Файл скачан!" : "Экспорт завершён!"}</strong>
+          <p>${
+            isDownload
+              ? `Сохранён файл с ${count} записями за ${period}`
+              : `Скопировано ${count} записей за ${period} в буфер обмена`
+          }</p>
+          ${filename ? `<p class="filename">📄 ${filename}</p>` : ""}
+        </div>
+      </div>
+    `;
+    } else {
+      notification.innerHTML = `
+      <div class="notification-content">
+        <span class="notification-icon">❌</span>
+        <div class="notification-text">
+          <strong>${
+            isDownload ? "Ошибка скачивания" : "Ошибка экспорта"
+          }</strong>
+          <p>${error || "Не удалось выполнить операцию"}</p>
+        </div>
+      </div>
+    `;
+    }
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => notification.classList.add("show"), 10);
+
+    setTimeout(() => {
+      notification.classList.remove("show");
+      setTimeout(() => {
+        if (notification.parentNode) {
+          document.body.removeChild(notification);
+        }
+      }, 300);
+    }, 5000); // Увеличиваем время показа до 5 секунд для скачивания
+
+    notification.addEventListener("click", () => {
+      notification.classList.remove("show");
+      setTimeout(() => {
+        if (notification.parentNode) {
+          document.body.removeChild(notification);
+        }
+      }, 300);
+    });
   }
 
   // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===

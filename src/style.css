@@ -70,7 +70,6 @@ main {
   gap: 0.5rem;
   padding: 1rem 0;
 }
-
 .nav-button {
   background-color: var(--primary-color);
   color: var(--font-color);
@@ -156,6 +155,7 @@ input:focus {
   font-weight: bold;
 }
 
+.download-button:hover,
 #save-note-btn:hover {
   opacity: 0.9;
 }
@@ -174,6 +174,11 @@ input:focus {
   color: var(--font-color);
   font-size: 2rem;
   cursor: pointer;
+}
+.export-buttons-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* Календари. Тут Grid - сам бог велел. */
@@ -351,6 +356,11 @@ input:focus {
   cursor: not-allowed;
 }
 
+.download-button:disabled,
+.export-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 /* === СТИЛИ ДЛЯ НЕДЕЛЬНОГО ВИДА === */
 
 .week-grid {
@@ -1169,6 +1179,21 @@ mark {
   }
 }
 
+/* ... в конец файла src/style.css ... */
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filename {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+  word-break: break-all;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   .search-container {
@@ -1200,4 +1225,285 @@ mark {
   .search-result-item {
     padding: 1rem;
   }
+}
+
+/* === СТИЛИ ДЛЯ КНОПОК СКАЧИВАНИЯ === */
+
+/* === СТИЛИ ДЛЯ ЭКСПОРТА === */
+
+.export-button {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+.export-button:hover {
+  background: linear-gradient(135deg, #218838, #1ea085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.export-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  animation: exportPulse 1.5s infinite;
+}
+
+.export-button.compact {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+@keyframes exportPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.download-button {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.download-button:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.download-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  animation: downloadPulse 1.5s infinite;
+}
+
+.download-button.compact {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+/* Группы кнопок экспорта/скачивания */
+.export-buttons-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Обновляем контейнеры для групп кнопок */
+.week-controls,
+.month-controls,
+.year-controls {
+  background-color: var(--primary-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.notes-header {
+  gap: 1rem;
+}
+
+.notes-header h4 {
+  flex: 1;
+}
+
+/* Уведомления об экспорте */
+.export-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: var(--primary-color);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-width: 350px;
+  transform: translateX(400px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.export-notification.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.export-notification.success {
+  border-color: #28a745;
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  color: #155724;
+}
+
+.export-notification.error {
+  border-color: #dc3545;
+  background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+  color: #721c24;
+}
+
+.notification-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.notification-text strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.notification-text p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+/* Дополнительные стили для уведомлений */
+.notification-text .filename {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+  font-family: monospace;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+/* Адаптивность для уведомлений */
+@media (max-width: 768px) {
+  .export-notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    transform: translateY(-100px);
+  }
+
+  .export-notification.show {
+    transform: translateY(0);
+  }
+}
+
+/* Анимация для кнопок скачивания во время процесса */
+@keyframes downloadPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .export-buttons-group {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .export-button,
+  .download-button {
+    width: 100%;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .notes-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  .notes-header h4 {
+    text-align: center;
+  }
+
+  .notes-header .export-buttons-group {
+    justify-content: center;
+  }
+
+  .week-controls,
+  .month-controls,
+  .year-controls {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .export-button.compact,
+  .download-button.compact {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .export-buttons-group {
+    gap: 0.4rem;
+  }
+}
+
+/* Улучшенная типографика для кнопок */
+.export-button,
+.download-button {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Фокус для accessibility */
+.export-button:focus,
+.download-button:focus {
+  outline: 2px solid rgba(0, 123, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.download-button:focus {
+  outline-color: rgba(0, 123, 255, 0.6);
 }
