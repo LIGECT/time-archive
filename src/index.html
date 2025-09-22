@@ -80,14 +80,31 @@
 
       <!-- ВИД "ПОИСК" (по умолчанию скрыт) -->
       <div id="search-view" data-view-content="search" hidden>
-        <input
-          type="search"
-          id="search-input"
-          pl
-          aceholder="Искать в архивах..."
-        />
-        <div id="search-results-list">
-          <!-- Сюда JS будет выводить найденное говно -->
+        <div class="search-container">
+          <div class="search-header">
+            <h3>🔍 Поиск по записям</h3>
+            <p>Найти записи по тексту, тегам или дате</p>
+          </div>
+
+          <div class="search-input-container">
+            <input
+              type="search"
+              id="search-input"
+              placeholder="Введите текст для поиска или #тег..."
+              autocomplete="off"
+            />
+            <div class="search-hints">
+              <small>
+                Советы: используйте <strong>#тег</strong> для поиска по тегам,
+                или просто текст для поиска по содержимому
+              </small>
+            </div>
+          </div>
+
+          <div id="search-suggestions" class="search-suggestions"></div>
+          <div id="search-results-list" class="search-results">
+            <!-- Сюда JS будет выводить найденное говно -->
+          </div>
         </div>
       </div>
     </main>
