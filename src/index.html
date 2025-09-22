@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Архив Потраченного Времени</title>
+    <!-- Сюда Webpack потом сам вставит ссылку на твой CSS -->
+  </head>
+  <body>
+    <header>
+      <nav id="main-nav">
+        <button data-view="today" class="nav-button active">Сегодня</button>
+        <button data-view="week" class="nav-button">Неделя</button>
+        <button data-view="month" class="nav-button">Месяц</button>
+        <button data-view="year" class="nav-button">Год</button>
+        <button data-view="search" class="nav-button">🔎 Поиск</button>
+      </nav>
+    </header>
+
+    <main id="app-container">
+      <!-- ВИД "СЕГОДНЯ" -->
+      <div id="today-view" data-view-content="today">
+        <section class="note-editor">
+          <form id="new-note-form">
+            <h3>Новая запись</h3>
+            <textarea
+              id="note-content"
+              placeholder="Что ты сегодня натворил, гений?"
+              rows="5"
+            ></textarea>
+            <input
+              type="text"
+              id="note-tags"
+              placeholder="Теги, через запятую (например: #bug, #meeting)"
+            />
+            <button type="submit" id="save-note-btn">
+              Сохранить и страдать дальше
+            </button>
+          </form>
+        </section>
+        <section class="recent-notes">
+          <h3>Последние записи</h3>
+          <div id="recent-notes-list">
+            <!-- Сюда JS будет вставлять последние пару заметок -->
+          </div>
+        </section>
+      </div>
+
+      <!-- ВИД "НЕДЕЛЯ" (по умолчанию скрыт) -->
+      <div id="week-view" data-view-content="week" hidden>
+        <div class="view-header">
+          <button class="nav-arrow">&lt;</button>
+          <h2 id="week-title">Отчёт за неделю</h2>
+          <button class="nav-arrow">&gt;</button>
+        </div>
+        <div id="week-notes-list">
+          <!-- Сюда JS будет вставлять список заметок за неделю -->
+        </div>
+      </div>
+
+      <!-- ВИД "МЕСЯЦ" (по умолчанию скрыт) -->
+      <div id="month-view" data-view-content="month" hidden>
+        <div class="view-header">
+          <button class="nav-arrow">&lt;</button>
+          <h2 id="month-title">Обзор за месяц</h2>
+          <button class="nav-arrow">&gt;</button>
+        </div>
+        <div id="month-calendar-grid">
+          <!-- Сюда JS будет рендерить охуенный календарь-график -->
+        </div>
+      </div>
+
+      <!-- ВИД "ГОД" (по умолчанию скрыт) -->
+      <div id="year-view" data-view-content="year" hidden>
+        <h2>Годовой отчёт о страданиях</h2>
+        <div id="year-calendar-grid">
+          <!-- Сюда JS будет рендерить годовой календарь -->
+        </div>
+      </div>
+
+      <!-- ВИД "ПОИСК" (по умолчанию скрыт) -->
+      <div id="search-view" data-view-content="search" hidden>
+        <input
+          type="search"
+          id="search-input"
+          pl
+          aceholder="Искать в архивах..."
+        />
+        <div id="search-results-list">
+          <!-- Сюда JS будет выводить найденное говно -->
+        </div>
+      </div>
+    </main>
+
+    <!-- Сюда Webpack потом сам вставит ссылку на твой JS -->
+  </body>
+</html>
