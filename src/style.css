@@ -1507,3 +1507,82 @@ mark {
 .download-button:focus {
   outline-color: rgba(0, 123, 255, 0.6);
 }
+
+/* === PWA СТИЛИ === */
+
+.install-pwa-button {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+}
+
+.install-pwa-button:hover {
+  background: linear-gradient(135deg, #e55a2b, #e8831a);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.update-notification {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  border-color: #17a2b8;
+  color: #fff;
+}
+
+.update-button {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.update-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Адаптация для установленного PWA */
+@media all and (display-mode: standalone) {
+  body {
+    /* Добавляем отступ сверху для статус-бара на iOS */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #main-nav {
+    /* Скрываем кнопку установки в standalone режиме */
+  }
+
+  .install-pwa-button {
+    display: none !important;
+  }
+}
+
+/* Стили для iPad */
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .install-pwa-button {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+/* iOS Safari специфичные стили */
+@supports (-webkit-appearance: none) {
+  .install-pwa-button {
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}

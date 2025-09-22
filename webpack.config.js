@@ -1,5 +1,8 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
+const { InjectManifest } = require("workbox-webpack-plugin");
+const crypto = require("crypto");
 
 module.exports = {
   // Режим работы. 'development' для разработки, 'production' для продакшена.
@@ -66,6 +69,48 @@ module.exports = {
     new HtmlWebpackPlugin({
       // Теперь Webpack будет использовать твой src/index.html как шаблон для сборки.
       template: "./src/index.html",
+    }),
+    // Копируем статические файлы из `public` в `dist`
+    new CopyWebpackPlugin({
+      patterns: [
+        // Копируем всё из src/public в корень dist
+        // Исключаем sw.js, так как он будет сгенерирован Workbox'ом
+        { from: "src/public", to: ".", globOptions: { ignore: ["**/sw.js"] } },
+      ],
+    }),
+    // Используем InjectManifest для большего контроля над SW.
+    // Он возьмёт наш шаблон sw-template.js, вставит в него список файлов для кэширования
+    // и создаст готовый sw.js в папке dist.
+    new InjectManifest({
+      swSrc: "./src/sw-template.js", // Наш шаблон service worker'а
+      swDest: "sw.js", // Выходной файл service worker'а
+      exclude: [
+        /\.map$/, // Исключаем source maps
+        /manifest\.json$/, // Исключаем манифест (будем кэшировать отдельно в sw-template.js)
+        /\.DS_Store$/, // Исключаем системные файлы macOS
+        /^manifest.*\.js$/, // Исключаем webpack манифесты
+      ],
+      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB максимум для кэширования
+      // ВНИМАНИЕ: Этот transform заставляет все файлы перекачиваться при каждой новой сборке,
+      // даже если они не изменились. Это может быть полезно для разработки, но для продакшена
+      // рекомендуется удалить `manifestTransforms`, чтобы Workbox использовал хэши на основе
+      // содержимого файлов для умного кэширования.
+      manifestTransforms: [
+        (manifestEntries) => {
+          const manifest = manifestEntries.map((entry) => {
+            const revision = crypto
+              .createHash("md5")
+              .update(Buffer.from(entry.url + Date.now()))
+              .digest("hex");
+
+            return { ...entry, revision: revision.substring(0, 8) };
+          });
+
+          console.log(`📦 Workbox precache: ${manifest.length} файлов`);
+          // Возвращаем манифест и пустой массив предупреждений
+          return { manifest, warnings: [] };
+        },
+      ],
     }),
   ],
 };

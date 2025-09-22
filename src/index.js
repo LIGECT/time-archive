@@ -2,6 +2,201 @@ import "./style.css";
 import { db } from "./db.js";
 import { ViewManager } from "./views.js";
 
+// === PWA И SERVICE WORKER РЕГИСТРАЦИЯ ===
+
+// Упрощённая регистрация с Workbox
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      // Регистрируем SW, который сгенерировал Workbox
+      const registration = await navigator.serviceWorker.register("/sw.js", {
+        scope: "/",
+        updateViaCache: "none", // Не кэшируем сам SW файл
+      });
+
+      console.log(
+        "✅ Workbox Service Worker зарегистрирован:",
+        registration.scope
+      );
+
+      // Проверяем обновления каждые 60 секунд
+      setInterval(() => {
+        registration.update();
+      }, 60000);
+
+      // Обработка обновлений SW
+      registration.addEventListener("updatefound", () => {
+        const newWorker = registration.installing;
+
+        if (newWorker) {
+          newWorker.addEventListener("statechange", () => {
+            if (
+              newWorker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              showUpdateNotification();
+            }
+          });
+        }
+      });
+    } catch (error) {
+      console.error("❌ Ошибка регистрации Workbox Service Worker:", error);
+    }
+  });
+
+  // Слушаем сообщения от SW
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data && event.data.type === "CACHE_UPDATED") {
+      console.log("📦 Кэш обновлён:", event.data.payload);
+    }
+  });
+
+  // Перезагрузка страницы после активации нового SW для применения обновлений
+  let refreshing;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    window.location.reload();
+    refreshing = true;
+  });
+}
+
+// Обработка установки PWA
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  console.log("PWA готово к установке");
+
+  // Предотвращаем автоматический показ баннера
+  event.preventDefault();
+  deferredPrompt = event;
+
+  // Показываем свою кнопку установки
+  showInstallButton();
+});
+
+// Отслеживаем успешную установку
+window.addEventListener("appinstalled", () => {
+  console.log("PWA успешно установлено");
+  deferredPrompt = null;
+  hideInstallButton();
+
+  // Показываем уведомление об успешной установке
+  showInstallSuccessNotification();
+});
+
+// Функция показа кнопки установки
+function showInstallButton() {
+  // Создаём кнопку установки, если её нет
+  let installButton = document.getElementById("install-pwa-btn");
+
+  if (!installButton) {
+    installButton = document.createElement("button");
+    installButton.id = "install-pwa-btn";
+    installButton.className = "install-pwa-button";
+    installButton.innerHTML = "📱 Установить приложение";
+    installButton.title =
+      "Установить Архив Потраченного Времени как приложение";
+
+    // Добавляем в навигацию
+    const nav = document.getElementById("main-nav");
+    if (nav) {
+      nav.appendChild(installButton);
+    }
+  }
+
+  installButton.style.display = "inline-flex";
+
+  // Обработчик клика на кнопку установки
+  installButton.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+
+    try {
+      // Показываем диалог установки
+      deferredPrompt.prompt();
+
+      // Ждём выбор пользователя
+      const { outcome } = await deferredPrompt.userChoice;
+
+      console.log(
+        `Пользователь ${
+          outcome === "accepted" ? "согласился" : "отказался"
+        } установить PWA`
+      );
+
+      deferredPrompt = null;
+      hideInstallButton();
+    } catch (error) {
+      console.error("Ошибка установки PWA:", error);
+    }
+  });
+}
+
+// Функция скрытия кнопки установки
+function hideInstallButton() {
+  const installButton = document.getElementById("install-pwa-btn");
+  if (installButton) {
+    installButton.style.display = "none";
+  }
+}
+
+// Функция показа уведомления об обновлении
+function showUpdateNotification() {
+  const notification = document.createElement("div");
+  notification.className = "export-notification update-notification";
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="notification-icon">🔄</span>
+      <div class="notification-text">
+        <strong>Обновление доступно!</strong>
+        <p>Новая версия приложения готова к установке</p>
+        <button id="update-sw-btn" class="update-button">Обновить сейчас</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(notification);
+  setTimeout(() => notification.classList.add("show"), 10);
+
+  // Обработчик обновления
+  const updateBtn = notification.querySelector("#update-sw-btn");
+  updateBtn.addEventListener("click", () => {
+    // Сообщаем новому SW, чтобы он стал активным
+    navigator.serviceWorker.ready.then((registration) => {
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
+    });
+  });
+
+  // Автоскрытие через 10 секунд
+  setTimeout(() => {
+    notification.classList.remove("show");
+    setTimeout(() => notification.remove(), 300);
+  }, 10000);
+}
+
+// Уведомление об успешной установке
+function showInstallSuccessNotification() {
+  const notification = document.createElement("div");
+  notification.className = "export-notification success";
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="notification-icon">✅</span>
+      <div class="notification-text">
+        <strong>Приложение установлено!</strong>
+        <p>Архив Потраченного Времени теперь доступен с главного экрана.</p>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(notification);
+  setTimeout(() => notification.classList.add("show"), 10);
+
+  setTimeout(() => {
+    notification.classList.remove("show");
+    setTimeout(() => notification.remove(), 300);
+  }, 5000);
+}
+
 // Инициализация приложения
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Архив Потраченного Времени запускается...");
