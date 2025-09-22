@@ -1,7 +1,5 @@
 import { db } from "./db.js";
-import { getWeekStart } from "./dateUtils.js";
 
-// Класс для управления видами приложения
 export class ViewManager {
   constructor() {
     this.currentView = "today";
@@ -9,54 +7,136 @@ export class ViewManager {
     this.currentMonth = new Date().getMonth();
     this.currentYear = new Date().getFullYear();
 
-    this.initNavigation();
+    this.init();
   }
 
-  // Инициализация обработчиков навигации
+  // Полная инициализация менеджера
+  init() {
+    console.log("Инициализация ViewManager...");
+
+    this.initNavigation();
+    this.initNavigationArrows();
+    this.setupEventListeners();
+  }
+
+  // === ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ===
+
+  // Инициализация навигации
   initNavigation() {
     const navButtons = document.querySelectorAll(".nav-button");
 
-    navButtons.forEach((button) => {
+    if (navButtons.length === 0) {
+      console.error("Кнопки навигации не найдены!");
+      return;
+    }
+
+    console.log(`Найдено ${navButtons.length} кнопок навигации`);
+
+    navButtons.forEach((button, index) => {
+      const view = button.dataset.view;
+
+      if (!view) {
+        console.warn(`Кнопка ${index} не имеет data-view атрибута`);
+        return;
+      }
+
       button.addEventListener("click", (e) => {
-        const view = e.target.dataset.view;
+        e.preventDefault();
+        console.log(`Переключение на вид: ${view}`);
         this.switchView(view);
       });
-    });
 
-    // Обработчики для стрелочек в заголовках
-    this.initNavigationArrows();
+      // Accessibility: поддержка клавиатуры
+      button.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          this.switchView(view);
+        }
+      });
+    });
   }
 
   // Переключение между видами
   async switchView(viewName) {
-    // Скрываем все виды
-    document.querySelectorAll("[data-view-content]").forEach((view) => {
+    console.log(`Переключение на вид: ${viewName}`);
+
+    try {
+      // 1. Скрываем все виды
+      this.hideAllViews();
+
+      // 2. Убираем активные классы у всех кнопок
+      this.deactivateAllNavButtons();
+
+      // 3. Показываем нужный вид
+      const success = this.showView(viewName);
+
+      if (!success) {
+        console.error(`Вид ${viewName} не найден!`);
+        return;
+      }
+
+      // 4. Активируем соответствующую кнопку
+      this.activateNavButton(viewName);
+
+      // 5. Сохраняем текущий вид
+      this.currentView = viewName;
+
+      // 6. Загружаем данные для этого вида
+      await this.loadViewData(viewName);
+
+      console.log(`Успешно переключились на вид: ${viewName}`);
+    } catch (error) {
+      console.error(`Ошибка при переключении на вид ${viewName}:`, error);
+    }
+  }
+
+  // Скрытие всех видов
+  hideAllViews() {
+    const allViews = document.querySelectorAll("[data-view-content]");
+    allViews.forEach((view) => {
       view.hidden = true;
+      view.style.display = "none";
     });
+  }
 
-    // Убираем активный класс у всех кнопок
-    document.querySelectorAll(".nav-button").forEach((btn) => {
-      btn.classList.remove("active");
-    });
-
-    // Показываем нужный вид
+  // Показ конкретного вида
+  showView(viewName) {
     const targetView = document.querySelector(
       `[data-view-content="${viewName}"]`
     );
+
+    if (!targetView) {
+      return false;
+    }
+
+    targetView.hidden = false;
+    targetView.style.display = "block";
+    return true;
+  }
+
+  // Деактивация всех кнопок навигации
+  deactivateAllNavButtons() {
+    const allButtons = document.querySelectorAll(".nav-button");
+    allButtons.forEach((btn) => {
+      btn.classList.remove("active");
+      btn.setAttribute("aria-selected", "false");
+    });
+  }
+
+  // Активация кнопки навигации
+  activateNavButton(viewName) {
     const activeButton = document.querySelector(`[data-view="${viewName}"]`);
 
-    if (targetView && activeButton) {
-      targetView.hidden = false;
+    if (activeButton) {
       activeButton.classList.add("active");
-      this.currentView = viewName;
-
-      // Загружаем данные для этого вида
-      await this.loadViewData(viewName);
+      activeButton.setAttribute("aria-selected", "true");
     }
   }
 
   // Загрузка данных в зависимости от вида
   async loadViewData(viewName) {
+    console.log(`Загрузка данных для вида: ${viewName}`);
+
     try {
       switch (viewName) {
         case "today":
@@ -72,55 +152,155 @@ export class ViewManager {
           await this.loadYearView();
           break;
         case "search":
-          // Поиск загружается по запросу
           this.setupSearch();
           break;
+        default:
+          console.warn(`Неизвестный вид: ${viewName}`);
       }
     } catch (error) {
       console.error(`Ошибка загрузки вида ${viewName}:`, error);
+      this.showError(`Ошибка загрузки данных для вида "${viewName}"`);
     }
   }
 
-  // Загрузка записей за сегодня
+  // === ВИД "СЕГОДНЯ" ===
+
   async loadTodayView() {
-    const notes = await db.getTodayNotes();
-    this.updateRecentNotesList(notes.slice(0, 5));
-  }
+    console.log('Загрузка вида "Сегодня"...');
 
-  // Загрузка записей за неделю
-  async loadWeekView() {
-    if (!this.currentWeekStart) {
-      this.currentWeekStart = getWeekStart(new Date());
+    try {
+      const todayNotes = await db.getTodayNotes();
+      console.log(`Найдено записей за сегодня: ${todayNotes.length}`);
+
+      const recentNotes = todayNotes.slice(0, 10);
+      this.updateRecentNotesList(recentNotes);
+
+      // Показываем записи за вчера для контекста
+      if (typeof db.getYesterdayNotes === "function") {
+        const yesterdayNotes = await db.getYesterdayNotes();
+        if (yesterdayNotes.length > 0) {
+          this.showYesterdayNotes(yesterdayNotes.slice(0, 5));
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки вида "Сегодня":', error);
+      this.showError("Не удалось загрузить записи за сегодня");
     }
-
-    const notes = await db.getWeekNotes(this.currentWeekStart);
-    this.updateWeekView(notes);
   }
 
-  // Загрузка записей за месяц
-  async loadMonthView() {
-    const notes = await db.getMonthNotes(this.currentYear, this.currentMonth);
-    this.updateMonthView(notes);
-  }
-
-  // Загрузка записей за год
-  async loadYearView() {
-    const stats = await db.getNotesStats(this.currentYear);
-    this.updateYearView(stats);
-  }
-
-  // Обновление списка записей (для today и week)
+  // Обновление списка последних записей
   updateRecentNotesList(notes) {
     const container = document.getElementById("recent-notes-list");
 
-    if (notes.length === 0) {
-      container.innerHTML = "<p>Записей нет. Начни страдать!</p>";
+    if (!container) {
+      console.error("Контейнер recent-notes-list не найден!");
       return;
     }
 
-    container.innerHTML = notes
-      .map((note) => this.createNoteHTML(note))
-      .join("");
+    if (notes.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>📝 Пока записей нет</p>
+          <p>Начни документировать свои страдания!</p>
+        </div>
+      `;
+      return;
+    }
+
+    const notesHTML = notes.map((note) => this.createNoteHTML(note)).join("");
+
+    container.innerHTML = `
+      <div class="notes-header">
+        <h4>Последние записи (${notes.length})</h4>
+      </div>
+      <div class="notes-list">
+        ${notesHTML}
+      </div>
+    `;
+
+    console.log(`Отображено ${notes.length} записей`);
+  }
+
+  // Показ записей за вчера (дополнительно)
+  showYesterdayNotes(notes) {
+    const container = document.getElementById("recent-notes-list");
+
+    if (!container || notes.length === 0) return;
+
+    const yesterdayHTML = `
+      <div class="yesterday-notes">
+        <h4>Вчера (${notes.length})</h4>
+        <div class="notes-list">
+          ${notes.map((note) => this.createNoteHTML(note)).join("")}
+        </div>
+      </div>
+    `;
+
+    container.insertAdjacentHTML("beforeend", yesterdayHTML);
+  }
+
+  // Создание HTML для одной записи
+  createNoteHTML(note) {
+    const date = new Date(note.date);
+    const now = new Date();
+
+    let timeString;
+    if (this.isSameDay(date, now)) {
+      timeString = date.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      timeString = date.toLocaleString("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    const tagsHTML =
+      note.tags.length > 0
+        ? `<div class="note-tags">${note.tags.join(" ")}</div>`
+        : "";
+
+    const content =
+      note.content.length > 200
+        ? note.content.substring(0, 200) + "..."
+        : note.content;
+
+    return `
+      <div class="note-item" data-note-id="${
+        note.id
+      }" title="Запись от ${date.toLocaleString("ru-RU")}">
+        <div class="note-header">
+          <span class="note-time">${timeString}</span>
+          <span class="note-id">#${note.id}</span>
+        </div>
+        <div class="note-content">${this.escapeHtml(content)}</div>
+        ${tagsHTML}
+      </div>
+    `;
+  }
+
+  // === ВИД "НЕДЕЛЯ" ===
+
+  async loadWeekView() {
+    console.log("Загрузка недельного вида...");
+
+    try {
+      if (!this.currentWeekStart) {
+        this.currentWeekStart = this.getWeekStart(new Date());
+      }
+
+      const notes = await db.getWeekNotes(this.currentWeekStart);
+      console.log(`Найдено записей за неделю: ${notes.length}`);
+
+      this.updateWeekView(notes);
+    } catch (error) {
+      console.error("Ошибка загрузки недельного вида:", error);
+      this.showError("Не удалось загрузить записи за неделю");
+    }
   }
 
   // Обновление недельного вида
@@ -128,74 +308,108 @@ export class ViewManager {
     const container = document.getElementById("week-notes-list");
     const title = document.getElementById("week-title");
 
-    // Обновляем заголовок
+    if (!container || !title) {
+      console.error("Контейнеры для недельного вида не найдены!");
+      return;
+    }
+
     const endDate = new Date(this.currentWeekStart);
     endDate.setDate(endDate.getDate() + 6);
 
-    title.textContent = `Неделя ${this.formatDate(
-      this.currentWeekStart
-    )} - ${this.formatDate(endDate)}`;
+    const startStr = this.currentWeekStart.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+    });
+    const endStr = endDate.toLocaleDateString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
 
-    // Группируем записи по дням
-    const notesByDay = this.groupNotesByDay(notes);
+    title.textContent = `Неделя ${startStr} — ${endStr}`;
 
-    container.innerHTML = Object.entries(notesByDay)
-      .map(
-        ([day, dayNotes]) => `
-        <div class="day-group">
-          <h4>${this.formatDayHeader(day)}</h4>
-          <div class="day-notes">
-            ${dayNotes.map((note) => this.createNoteHTML(note)).join("")}
-          </div>
+    if (notes.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>📅 За эту неделю записей нет</p>
+          <p>Время начать документировать!</p>
         </div>
-      `
-      )
+      `;
+      return;
+    }
+
+    const notesByDay = this.groupNotesByDay(notes);
+    const weekDays = this.getWeekDaysArray(this.currentWeekStart);
+
+    const weekHTML = weekDays
+      .map((day) => {
+        const dateKey = day.date.toDateString();
+        const dayNotes = notesByDay[dateKey] || [];
+
+        return `
+          <div class="week-day ${dayNotes.length > 0 ? "has-notes" : ""}">
+            <div class="day-header">
+              <h4>${day.name}</h4>
+              <span class="day-date">${day.date.toLocaleDateString("ru-RU", {
+                day: "2-digit",
+                month: "2-digit",
+              })}</span>
+              ${
+                dayNotes.length > 0
+                  ? `<span class="notes-count">${dayNotes.length}</span>`
+                  : ""
+              }
+            </div>
+            <div class="day-notes">
+              ${
+                dayNotes.length > 0
+                  ? dayNotes
+                      .map((note) => this.createCompactNoteHTML(note))
+                      .join("")
+                  : '<p class="no-notes">Записей нет</p>'
+              }
+            </div>
+          </div>
+        `;
+      })
       .join("");
-  }
 
-  // Группировка записей по дням
-  groupNotesByDay(notes) {
-    const groups = {};
-
-    notes.forEach((note) => {
-      const day = note.date.toDateString();
-      if (!groups[day]) {
-        groups[day] = [];
-      }
-      groups[day].push(note);
-    });
-
-    return groups;
-  }
-
-  // Создание HTML для одной записи
-  createNoteHTML(note) {
-    const date = new Date(note.date);
-    const timeString = date.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const tagsHtml =
-      note.tags.length > 0
-        ? `<div class="note-tags">${note.tags.join(" ")}</div>`
-        : "";
-
-    return `
-      <div class="note-item" data-note-id="${note.id}">
-        <div class="note-time">${timeString}</div>
-        <div class="note-content">${this.escapeHtml(note.content)}</div>
-        ${tagsHtml}
+    container.innerHTML = `
+      <div class="week-grid">
+        ${weekHTML}
+      </div>
+      <div class="week-summary">
+        <p>Всего записей за неделю: <strong>${notes.length}</strong></p>
       </div>
     `;
   }
 
-  // Обновление месячного вида
+  // === ВИД "МЕСЯЦ" ===
+
+  async loadMonthView() {
+    console.log("Загрузка месячного вида...");
+
+    try {
+      const notes = await db.getMonthNotes(this.currentYear, this.currentMonth);
+      console.log(`Найдено записей за месяц: ${notes.length}`);
+
+      this.updateMonthView(notes);
+    } catch (error) {
+      console.error("Ошибка загрузки месячного вида:", error);
+      this.showError("Не удалось загрузить записи за месяц");
+    }
+  }
+
+  // Обновление месячного вида с календарём
   updateMonthView(notes) {
     const container = document.getElementById("month-calendar-grid");
     const title = document.getElementById("month-title");
 
-    // Обновляем заголовок
+    if (!container || !title) {
+      console.error("Контейнеры для месячного вида не найдены!");
+      return;
+    }
+
     const monthNames = [
       "Январь",
       "Февраль",
@@ -213,13 +427,11 @@ export class ViewManager {
 
     title.textContent = `${monthNames[this.currentMonth]} ${this.currentYear}`;
 
-    // Создаём календарную сетку
     const firstDay = new Date(this.currentYear, this.currentMonth, 1);
     const lastDay = new Date(this.currentYear, this.currentMonth + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Понедельник = 0
+    const startDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
 
-    // Группируем записи по дням
     const notesByDay = {};
     notes.forEach((note) => {
       const day = note.date.getDate();
@@ -229,10 +441,10 @@ export class ViewManager {
       notesByDay[day].push(note);
     });
 
-    // Очищаем контейнер
     container.innerHTML = "";
+    container.className = "month-calendar-grid";
 
-    // Добавляем заголовки дней недели
+    // Заголовки дней недели
     const dayHeaders = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
     dayHeaders.forEach((dayName) => {
       const dayHeader = document.createElement("div");
@@ -241,51 +453,76 @@ export class ViewManager {
       container.appendChild(dayHeader);
     });
 
-    // Добавляем пустые ячейки в начале месяца
+    // Пустые ячейки в начале месяца
     for (let i = 0; i < startDayOfWeek; i++) {
       const emptyDay = document.createElement("div");
       emptyDay.className = "calendar-day empty";
       container.appendChild(emptyDay);
     }
 
-    // Добавляем дни месяца
+    // Дни месяца
+    const today = new Date();
     for (let day = 1; day <= daysInMonth; day++) {
       const dayElement = document.createElement("div");
       dayElement.className = "calendar-day";
 
       const dayNotesCount = notesByDay[day] ? notesByDay[day].length : 0;
+      const isToday =
+        this.currentYear === today.getFullYear() &&
+        this.currentMonth === today.getMonth() &&
+        day === today.getDate();
 
+      let intensityClass = "";
       if (dayNotesCount > 0) {
         dayElement.classList.add("has-notes");
-        dayElement.innerHTML = `
+        if (dayNotesCount >= 5) intensityClass = "high-activity";
+        else if (dayNotesCount >= 3) intensityClass = "medium-activity";
+        else intensityClass = "low-activity";
+        dayElement.classList.add(intensityClass);
+      }
+
+      if (isToday) {
+        dayElement.classList.add("today");
+      }
+
+      dayElement.innerHTML = `
         <div class="day-number">${day}</div>
-        <div class="notes-count">${dayNotesCount}</div>
+        ${
+          dayNotesCount > 0
+            ? `<div class="notes-indicator">${dayNotesCount}</div>`
+            : ""
+        }
       `;
 
-        // Добавляем обработчик клика для показа записей этого дня
+      if (dayNotesCount > 0) {
+        dayElement.style.cursor = "pointer";
         dayElement.addEventListener("click", () => {
-          this.showDayNotes(
+          this.showDayNotesModal(
             this.currentYear,
             this.currentMonth,
             day,
             notesByDay[day]
           );
         });
-      } else {
-        dayElement.innerHTML = `<div class="day-number">${day}</div>`;
-      }
-
-      // Выделяем сегодняшний день
-      const today = new Date();
-      if (
-        this.currentYear === today.getFullYear() &&
-        this.currentMonth === today.getMonth() &&
-        day === today.getDate()
-      ) {
-        dayElement.classList.add("today");
       }
 
       container.appendChild(dayElement);
+    }
+  }
+
+  // === ВИД "ГОД" ===
+
+  async loadYearView() {
+    console.log("Загрузка годового вида...");
+
+    try {
+      const stats = await db.getNotesStats(this.currentYear);
+      console.log(`Статистика за год: ${stats.totalNotes} записей`);
+
+      this.updateYearView(stats);
+    } catch (error) {
+      console.error("Ошибка загрузки годового вида:", error);
+      this.showError("Не удалось загрузить данные за год");
     }
   }
 
@@ -294,84 +531,467 @@ export class ViewManager {
     const container = document.getElementById("year-calendar-grid");
     const title = document.querySelector("#year-view h2");
 
-    // Обновляем заголовок
-    title.textContent = `Годовой отчёт о страданиях - ${this.currentYear}`;
+    if (!container || !title) {
+      console.error("Контейнеры для годового вида не найдены!");
+      return;
+    }
 
-    // Очищаем контейнер
+    title.textContent = `Годовой архив страданий — ${this.currentYear}`;
+
     container.innerHTML = "";
+    container.className = "year-calendar-grid";
 
     const monthNames = [
-      "Янв",
-      "Фев",
-      "Мар",
-      "Апр",
+      "Январь",
+      "Февраль",
+      "Март",
+      "Апрель",
       "Май",
-      "Июн",
-      "Июл",
-      "Авг",
-      "Сен",
-      "Окт",
-      "Ноя",
-      "Дек",
+      "Июнь",
+      "Июль",
+      "Август",
+      "Сентябрь",
+      "Октябрь",
+      "Ноябрь",
+      "Декабрь",
     ];
 
-    // Находим максимальное количество записей в месяце для нормализации
-    const maxNotesInMonth = Math.max(...Object.values(stats.monthlyStats));
+    const maxNotesInMonth = Math.max(...Object.values(stats.monthlyStats), 1);
 
-    // Создаём ячейки для каждого месяца
-    for (let month = 0; month < 12; month++) {
+    monthNames.forEach((monthName, monthIndex) => {
+      const notesCount = stats.monthlyStats[monthIndex] || 0;
+      const intensity = notesCount / maxNotesInMonth;
+
       const monthElement = document.createElement("div");
       monthElement.className = "year-month";
 
-      const notesCount = stats.monthlyStats[month] || 0;
-      const intensity = maxNotesInMonth > 0 ? notesCount / maxNotesInMonth : 0;
-
-      // Добавляем класс интенсивности для визуализации
       if (notesCount > 0) {
         monthElement.classList.add("has-notes");
-        if (intensity > 0.7) monthElement.classList.add("high-activity");
-        else if (intensity > 0.3) monthElement.classList.add("medium-activity");
+        if (intensity >= 0.8) monthElement.classList.add("very-high-activity");
+        else if (intensity >= 0.6) monthElement.classList.add("high-activity");
+        else if (intensity >= 0.4)
+          monthElement.classList.add("medium-activity");
         else monthElement.classList.add("low-activity");
       }
 
       monthElement.innerHTML = `
-      <div class="month-name">${monthNames[month]}</div>
-      <div class="month-count">${notesCount}</div>
-    `;
+        <div class="month-header">
+          <span class="month-name">${monthName}</span>
+          <span class="month-number">${monthIndex + 1}</span>
+        </div>
+        <div class="month-count">${notesCount}</div>
+        <div class="month-bar">
+          <div class="month-bar-fill" style="width: ${intensity * 100}%"></div>
+        </div>
+      `;
 
-      // Добавляем обработчик для перехода к месячному виду
+      monthElement.style.cursor = "pointer";
       monthElement.addEventListener("click", () => {
-        this.currentMonth = month;
+        this.currentMonth = monthIndex;
         this.switchView("month");
       });
 
+      monthElement.title = `${monthName} ${this.currentYear}: ${notesCount} записей`;
+
       container.appendChild(monthElement);
-    }
-
-    // Добавляем общую статистику
-    const statsElement = document.createElement("div");
-    statsElement.className = "year-stats";
-    statsElement.innerHTML = `
-    <h3>Статистика за год</h3>
-    <p>Всего записей: <strong>${stats.totalNotes}</strong></p>
-    <p>Записей в месяц в среднем: <strong>${Math.round(
-      stats.totalNotes / 12
-    )}</strong></p>
-    <p>Самый продуктивный месяц: <strong>${
-      monthNames[
-        Object.keys(stats.monthlyStats).reduce((a, b) =>
-          stats.monthlyStats[a] > stats.monthlyStats[b] ? a : b
-        )
-      ]
-    }</strong></p>
-  `;
-
-    container.appendChild(statsElement);
+    });
   }
 
-  // Показать записи конкретного дня (модальное окно или расширяемый блок)
-  showDayNotes(year, month, day, notes) {
-    // Простая реализация через alert (потом можешь заменить на модальное окно)
+  // === ПОИСК ===
+
+  setupSearch() {
+    console.log("Настройка поиска...");
+
+    const searchInput = document.getElementById("search-input");
+    const searchResults = document.getElementById("search-results-list");
+    const searchSuggestions = document.getElementById("search-suggestions");
+
+    if (!searchInput || !searchResults) {
+      console.error("Элементы поиска не найдены!");
+      return;
+    }
+
+    let searchTimeout;
+    let lastQuery = "";
+
+    // Показываем подсказки при загрузке вида
+    this.showSearchSuggestions();
+
+    // Основной поиск с debounce (живое обновление)
+    searchInput.addEventListener("input", (e) => {
+      clearTimeout(searchTimeout);
+
+      const query = e.target.value.trim();
+      lastQuery = query;
+
+      // Очищаем подсказки когда начинаем печатать
+      if (query.length > 0 && searchSuggestions) {
+        searchSuggestions.innerHTML = "";
+      }
+
+      if (query.length === 0) {
+        // Если поле пустое, показываем подсказки
+        this.showSearchSuggestions();
+        searchResults.innerHTML = `
+        <div class="search-placeholder">
+          <p>👆 Начните вводить текст для поиска</p>
+          <p>Поиск происходит автоматически по мере ввода</p>
+        </div>
+      `;
+        return;
+      }
+
+      if (query.length === 1) {
+        searchResults.innerHTML = `
+        <div class="search-placeholder">
+          <p>Введите ещё ${2 - query.length} символ...</p>
+        </div>
+      `;
+        return;
+      }
+
+      // Показываем индикатор загрузки
+      if (query.length >= 2) {
+        searchResults.innerHTML = `
+        <div class="search-loading">
+          <p>🔍 Поиск "${this.escapeHtml(query)}"...</p>
+        </div>
+      `;
+      }
+
+      // Дебаунс - ждём 300мс после последнего ввода
+      searchTimeout = setTimeout(async () => {
+        // Проверяем, что запрос не изменился за время ожидания
+        if (query === lastQuery && query.length >= 2) {
+          await this.performSearch(query);
+        }
+      }, 300);
+    });
+
+    // Поиск по Enter для быстрого выполнения
+    searchInput.addEventListener("keypress", async (e) => {
+      if (e.key === "Enter") {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        if (query.length >= 2) {
+          await this.performSearch(query);
+        }
+      }
+    });
+
+    // Показываем подсказки при фокусе на пустом поле
+    searchInput.addEventListener("focus", () => {
+      if (searchInput.value.length === 0) {
+        this.showSearchSuggestions();
+      }
+    });
+
+    // Очищаем подсказки при потере фокуса
+    searchInput.addEventListener("blur", () => {
+      // Задержка, чтобы можно было кликнуть на подсказку
+      setTimeout(() => {
+        if (searchInput.value.length === 0 && searchSuggestions) {
+          searchSuggestions.innerHTML = "";
+        }
+      }, 200);
+    });
+
+    // Автофокус на поиск при переключении на вкладку
+    searchInput.focus();
+  }
+
+  async performSearch(query) {
+    const searchResults = document.getElementById("search-results-list");
+
+    try {
+      console.log(`Выполняется поиск: "${query}"`);
+
+      let results = [];
+
+      // Определяем тип поиска по запросу
+      if (query.startsWith("#")) {
+        // Поиск по тегам
+        const tagQuery = query.substring(1); // убираем #
+        results = await db.searchByTags([tagQuery], false); // false = любой из тегов
+        console.log(
+          `Поиск по тегу "${tagQuery}": найдено ${results.length} записей`
+        );
+      } else {
+        // Обычный текстовый поиск
+        results = await db.searchNotes(query, {
+          searchInContent: true,
+          searchInTags: true,
+          caseSensitive: false,
+          limit: 50,
+        });
+        console.log(
+          `Текстовый поиск "${query}": найдено ${results.length} записей`
+        );
+      }
+
+      // Отображаем результаты
+      this.displaySearchResults(results, query);
+    } catch (error) {
+      console.error("Ошибка поиска:", error);
+      searchResults.innerHTML = `
+      <div class="search-error">
+        <p>❌ Ошибка при выполнении поиска</p>
+        <p>Попробуйте ещё раз или перезагрузите страницу</p>
+        <button onclick="location.reload()" class="retry-button">Перезагрузить</button>
+      </div>
+    `;
+    }
+  }
+
+  displaySearchResults(notes, query) {
+    const searchResults = document.getElementById("search-results-list");
+
+    if (notes.length === 0) {
+      searchResults.innerHTML = `
+      <div class="no-results">
+        <h4>😔 Ничего не найдено</h4>
+        <p>По запросу <strong>"${this.escapeHtml(
+          query
+        )}"</strong> ничего не найдено</p>
+        <div class="search-tips">
+          <h5>💡 Попробуйте:</h5>
+          <ul>
+            <li>Упростить поисковый запрос</li>
+            <li>Проверить правильность написания</li>
+            <li>Использовать другие ключевые слова</li>
+            <li>Поискать по тегам: <code>#работа</code>, <code>#проект</code></li>
+          </ul>
+        </div>
+      </div>
+    `;
+      return;
+    }
+
+    // Группируем результаты по дням для лучшей читаемости
+    const resultsByDate = this.groupSearchResultsByDate(notes);
+
+    const totalResults = notes.length;
+    const resultsHeader = `
+    <div class="search-results-header">
+      <h4>✅ Найдено: ${totalResults} записей</h4>
+      <p>по запросу <strong>"${this.escapeHtml(query)}"</strong></p>
+      ${
+        totalResults > 10
+          ? "<p><small>Показаны самые релевантные результаты</small></p>"
+          : ""
+      }
+    </div>
+  `;
+
+    const resultsHTML = Object.entries(resultsByDate)
+      .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA)) // Сортируем по дате, новые первыми
+      .map(([dateString, dayNotes]) => {
+        const date = new Date(dateString);
+        const formattedDate = this.formatSearchDate(date);
+
+        return `
+        <div class="search-day-group">
+          <h5 class="search-day-header">${formattedDate} (${
+          dayNotes.length
+        })</h5>
+          <div class="search-day-results">
+            ${dayNotes
+              .map((note) => this.createSearchResultHTML(note, query))
+              .join("")}
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    searchResults.innerHTML = resultsHeader + resultsHTML;
+
+    // Плавная прокрутка к результатам
+    searchResults.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Группировка результатов поиска по датам
+  groupSearchResultsByDate(notes) {
+    const groups = {};
+
+    notes.forEach((note) => {
+      const dateKey = note.date.toDateString();
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(note);
+    });
+
+    return groups;
+  }
+
+  // Создание HTML для результата поиска с подсветкой
+  createSearchResultHTML(note, query = "") {
+    const date = new Date(note.date);
+    const timeString = date.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // Подсвечиваем найденный текст
+    let highlightedContent = this.escapeHtml(note.content);
+    if (query && !query.startsWith("#")) {
+      const regex = new RegExp(`(${this.escapeRegex(query)})`, "gi");
+      highlightedContent = highlightedContent.replace(regex, "<mark>$1</mark>");
+    }
+
+    // Подсвечиваем найденные теги
+    let highlightedTags = note.tags.map((tag) => {
+      if (
+        query.startsWith("#") &&
+        tag.toLowerCase().includes(query.substring(1).toLowerCase())
+      ) {
+        const tagRegex = new RegExp(
+          `(${this.escapeRegex(query.substring(1))})`,
+          "gi"
+        );
+        return tag.replace(tagRegex, "<mark>$1</mark>");
+      }
+      return tag;
+    });
+
+    const tagsHTML =
+      highlightedTags.length > 0
+        ? `<div class="search-result-tags">${highlightedTags.join(" ")}</div>`
+        : "";
+
+    return `
+    <div class="search-result-item" data-note-id="${note.id}">
+      <div class="search-result-header">
+        <span class="search-result-time">${timeString}</span>
+        <span class="search-result-id">#${note.id}</span>
+      </div>
+      <div class="search-result-content">${highlightedContent}</div>
+      ${tagsHTML}
+    </div>
+  `;
+  }
+
+  // Показ поисковых подсказок
+  async showSearchSuggestions() {
+    const suggestionsContainer = document.getElementById("search-suggestions");
+
+    if (!suggestionsContainer) return;
+
+    try {
+      // Получаем популярные теги для подсказок
+      const popularTags = (await db.getPopularTags)
+        ? await db.getPopularTags(8)
+        : [];
+
+      if (popularTags.length > 0) {
+        const suggestionsHTML = `
+        <div class="suggestions">
+          <h5>🏷️ Популярные теги:</h5>
+          <div class="tag-suggestions">
+            ${popularTags
+              .map(
+                ({ tag, count }) =>
+                  `<button class="tag-suggestion" data-tag="${tag}" title="${count} записей">
+                ${tag} <span class="tag-count">(${count})</span>
+              </button>`
+              )
+              .join("")}
+          </div>
+          <div class="search-examples">
+            <h5>💡 Примеры поиска:</h5>
+            <div class="example-queries">
+              <button class="example-query" data-query="встреча">встреча</button>
+              <button class="example-query" data-query="#баг">#баг</button>
+              <button class="example-query" data-query="проект">проект</button>
+              <button class="example-query" data-query="#важно">#важно</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+        suggestionsContainer.innerHTML = suggestionsHTML;
+
+        // Добавляем обработчики клика на теги и примеры
+        suggestionsContainer
+          .querySelectorAll(".tag-suggestion")
+          .forEach((tagEl) => {
+            tagEl.addEventListener("click", (e) => {
+              const tag =
+                e.target.dataset.tag ||
+                e.target.closest("[data-tag]").dataset.tag;
+              const searchInput = document.getElementById("search-input");
+              searchInput.value = tag;
+              searchInput.focus();
+              this.performSearch(tag);
+            });
+          });
+
+        suggestionsContainer
+          .querySelectorAll(".example-query")
+          .forEach((exampleEl) => {
+            exampleEl.addEventListener("click", (e) => {
+              const query = e.target.dataset.query;
+              const searchInput = document.getElementById("search-input");
+              searchInput.value = query;
+              searchInput.focus();
+              this.performSearch(query);
+            });
+          });
+      } else {
+        // Если нет тегов, показываем базовые подсказки
+        suggestionsContainer.innerHTML = `
+        <div class="suggestions">
+          <div class="search-examples">
+            <h5>💡 Как искать:</h5>
+            <ul>
+              <li><strong>По тексту:</strong> просто введите слово или фразу</li>
+              <li><strong>По тегам:</strong> начните с # (например: #работа)</li>
+              <li><strong>Поиск живой:</strong> результаты появляются по мере ввода</li>
+            </ul>
+          </div>
+        </div>
+      `;
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки подсказок:", error);
+    }
+  }
+
+  // Форматирование даты для результатов поиска
+  formatSearchDate(date) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+
+    if (date >= today) {
+      return "🕒 Сегодня";
+    } else if (date >= yesterday) {
+      return "📅 Вчера";
+    } else {
+      const daysDiff = Math.floor((today - date) / (1000 * 60 * 60 * 24));
+      if (daysDiff <= 7) {
+        return `📆 ${daysDiff} дней назад`;
+      } else {
+        return date.toLocaleDateString("ru-RU", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year:
+            date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+        });
+      }
+    }
+  }
+
+  // Экранирование регулярных выражений
+  escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
+
+  showDayNotesModal(year, month, day, notes) {
     const date = new Date(year, month, day);
     const dateString = date.toLocaleDateString("ru-RU");
 
@@ -391,267 +1011,147 @@ export class ViewManager {
     alert(notesText);
   }
 
-  // Настройка расширенного поиска
-  setupSearch() {
-    // Создаём расширенный поисковой интерфейс
-    this.createAdvancedSearchInterface();
-
-    // Теперь, когда HTML создан, получаем новые элементы
-    const searchInput = document.getElementById("search-input");
-    const searchResults = document.getElementById("search-results-list");
-
-    let searchTimeout;
-    let lastQuery = "";
-
-    // Основной поиск с debounce
-    searchInput.addEventListener("input", (e) => {
-      clearTimeout(searchTimeout);
-
-      const query = e.target.value.trim();
-      lastQuery = query;
-
-      if (query.length < 2) {
-        searchResults.innerHTML = "<p>Введите минимум 2 символа для поиска</p>";
-        this.showSearchSuggestions();
-        return;
+  groupNotesByDay(notes) {
+    const groups = {};
+    notes.forEach((note) => {
+      const day = note.date.toDateString();
+      if (!groups[day]) {
+        groups[day] = [];
       }
+      groups[day].push(note);
+    });
+    return groups;
+  }
 
-      searchTimeout = setTimeout(async () => {
-        // Проверяем, что запрос не изменился за время ожидания
-        if (query === lastQuery) {
-          await this.performSearch(query);
+  getWeekDaysArray(weekStart) {
+    const days = [];
+    const dayNames = [
+      "Понедельник",
+      "Вторник",
+      "Среда",
+      "Четверг",
+      "Пятница",
+      "Суббота",
+      "Воскресенье",
+    ];
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      days.push({
+        name: dayNames[i],
+        date: date,
+      });
+    }
+    return days;
+  }
+
+  createCompactNoteHTML(note) {
+    const time = note.date.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const shortContent =
+      note.content.length > 100
+        ? note.content.substring(0, 100) + "..."
+        : note.content;
+
+    return `
+      <div class="compact-note" data-note-id="${note.id}">
+        <span class="compact-time">${time}</span>
+        <span class="compact-content">${this.escapeHtml(shortContent)}</span>
+        ${
+          note.tags.length > 0
+            ? `<span class="compact-tags">${note.tags
+                .slice(0, 2)
+                .join(" ")}</span>`
+            : ""
         }
-      }, 300);
-    });
-
-    // Поиск по Enter
-    searchInput.addEventListener("keypress", async (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault(); // Предотвращаем стандартное поведение (например, отправку формы)
-        clearTimeout(searchTimeout);
-        await this.performSearch(e.target.value.trim());
-      }
-    });
-
-    // Показываем предложения при фокусе
-    searchInput.addEventListener("focus", () => {
-      if (searchInput.value.length < 2) {
-        this.showSearchSuggestions();
-      }
-    });
+      </div>
+    `;
   }
 
-  // Создание интерфейса расширенного поиска
-  createAdvancedSearchInterface() {
-    const searchView = document.getElementById("search-view");
+  getMostActiveMonth(monthlyStats) {
+    const monthNames = [
+      "Январь",
+      "Февраль",
+      "Март",
+      "Апрель",
+      "Май",
+      "Июнь",
+      "Июль",
+      "Август",
+      "Сентябрь",
+      "Октябрь",
+      "Ноябрь",
+      "Декабрь",
+    ];
 
-    const advancedSearchHTML = `
-    <div class="search-container">
-      <div class="search-main">
-        <input type="search" id="search-input" placeholder="Поиск по записям и тегам..." />
-        <button id="advanced-search-toggle">Расширенный поиск</button>
-      </div>
-      
-      <div id="advanced-search-panel" class="advanced-search hidden">
-        <div class="search-filters">
-          <div class="filter-group">
-            <label>Поиск в:</label>
-            <label><input type="checkbox" id="search-content" checked> Тексте записей</label>
-            <label><input type="checkbox" id="search-tags" checked> Тегах</label>
-          </div>
-          
-          <div class="filter-group">
-            <label>Теги (через запятую):</label>
-            <input type="text" id="tags-filter" placeholder="#работа, #баг, #встреча">
-          </div>
-          
-          <div class="filter-group">
-            <label>Период:</label>
-            <select id="date-range-preset">
-              <option value="">Любой период</option>
-              <option value="today">Сегодня</option>
-              <option value="week">Эта неделя</option>
-              <option value="month">Этот месяц</option>
-              <option value="custom">Выбрать даты</option>
-            </select>
-          </div>
-          
-          <div id="custom-date-range" class="filter-group hidden">
-            <label>От: <input type="date" id="date-from"></label>
-            <label>До: <input type="date" id="date-to"></label>
-          </div>
-          
-          <div class="filter-group">
-            <label>Сортировка:</label>
-            <select id="sort-by">
-              <option value="date">По дате</option>
-              <option value="relevance">По релевантности</option>
-            </select>
-            <select id="sort-order">
-              <option value="desc">Новые первыми</option>
-              <option value="asc">Старые первыми</option>
-            </select>
-          </div>
-          
-          <button id="apply-advanced-search">Найти</button>
-          <button id="clear-search">Очистить</button>
+    let maxMonth = 0;
+    let maxCount = 0;
+
+    Object.entries(monthlyStats).forEach(([month, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        maxMonth = parseInt(month);
+      }
+    });
+
+    return monthNames[maxMonth];
+  }
+
+  getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const weekStart = new Date(d.setDate(diff));
+    weekStart.setHours(0, 0, 0, 0);
+    return weekStart;
+  }
+
+  isSameDay(date1, date2) {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  showError(message) {
+    console.error("ViewManager Error:", message);
+    const activeView = document.querySelector(
+      "[data-view-content]:not([hidden])"
+    );
+    if (activeView) {
+      const errorHTML = `
+        <div class="error-message">
+          <p>⚠️ ${message}</p>
+          <button onclick="location.reload()">Перезагрузить</button>
         </div>
-      </div>
-      
-      <div id="search-suggestions" class="search-suggestions"></div>
-      <div id="search-results-list" class="search-results"></div>
-    </div>
-  `;
-
-    searchView.innerHTML = advancedSearchHTML;
-
-    // Инициализируем обработчики для расширенного поиска
-    this.initAdvancedSearchHandlers();
-  }
-
-  // Инициализация обработчиков расширенного поиска
-  initAdvancedSearchHandlers() {
-    const toggleBtn = document.getElementById("advanced-search-toggle");
-    const advancedPanel = document.getElementById("advanced-search-panel");
-    const dateRangeSelect = document.getElementById("date-range-preset");
-    const customDateRange = document.getElementById("custom-date-range");
-    const applyBtn = document.getElementById("apply-advanced-search");
-    const clearBtn = document.getElementById("clear-search");
-
-    // Переключение расширенной панели
-    toggleBtn.addEventListener("click", () => {
-      advancedPanel.classList.toggle("hidden");
-      toggleBtn.textContent = advancedPanel.classList.contains("hidden")
-        ? "Расширенный поиск"
-        : "Скрыть расширенный поиск";
-    });
-
-    // Показ/скрытие кастомных дат
-    dateRangeSelect.addEventListener("change", (e) => {
-      customDateRange.classList.toggle("hidden", e.target.value !== "custom");
-    });
-
-    // Применение расширенного поиска
-    applyBtn.addEventListener("click", async () => {
-      await this.performAdvancedSearch();
-    });
-
-    // Очистка поиска
-    clearBtn.addEventListener("click", () => {
-      this.clearSearch();
-    });
-  }
-
-  // Выполнение обычного поиска
-  async performSearch(query) {
-    const searchResults = document.getElementById("search-results-list");
-
-    if (!query || query.length < 2) {
-      searchResults.innerHTML = "<p>Введите поисковый запрос</p>";
-      return;
-    }
-
-    try {
-      searchResults.innerHTML = "<p>Поиск...</p>";
-
-      // Определяем тип поиска
-      let results;
-
-      if (query.startsWith("#")) {
-        // Поиск по тегам
-        results = await db.searchByTags([query]);
-      } else if (query.includes(" ")) {
-        // Полнотекстовый поиск для фраз
-        results = await db.fullTextSearch(query, { highlightMatches: true });
-      } else {
-        // Обычный поиск
-        results = await db.searchNotes(query);
-      }
-
-      await db.saveSearchHistory(query, results.length);
-      this.displaySearchResults(results, query);
-    } catch (error) {
-      console.error("Ошибка поиска:", error);
-      searchResults.innerHTML = "<p>Ошибка при поиске. Попробуйте ещё раз.</p>";
+      `;
+      activeView.innerHTML = errorHTML;
     }
   }
 
-  // Выполнение расширенного поиска
-  async performAdvancedSearch() {
-    const searchResults = document.getElementById("search-results-list");
-
-    try {
-      searchResults.innerHTML = "<p>Выполняется расширенный поиск...</p>";
-
-      const criteria = this.getAdvancedSearchCriteria();
-      const results = await db.advancedSearch(criteria);
-
-      this.displaySearchResults(results, criteria.text || "расширенный поиск");
-    } catch (error) {
-      console.error("Ошибка расширенного поиска:", error);
-      searchResults.innerHTML = "<p>Ошибка при выполнении поиска</p>";
-    }
+  async updateCurrentView() {
+    await this.loadViewData(this.currentView);
   }
 
-  // Получение критериев расширенного поиска
-  getAdvancedSearchCriteria() {
-    const text = document.getElementById("search-input").value.trim();
-    const tagsInput = document.getElementById("tags-filter").value.trim();
-    const datePreset = document.getElementById("date-range-preset").value;
-    const sortBy = document.getElementById("sort-by").value;
-    const sortOrder = document.getElementById("sort-order").value;
-
-    let tags = [];
-    if (tagsInput) {
-      tags = tagsInput
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0);
-    }
-
-    let dateFrom = null;
-    let dateTo = null;
-
-    if (datePreset === "today") {
-      dateFrom = new Date();
-      dateFrom.setHours(0, 0, 0, 0);
-      dateTo = new Date();
-      dateTo.setHours(23, 59, 59, 999);
-    } else if (datePreset === "week") {
-      dateFrom = getWeekStart(new Date());
-      dateTo = new Date();
-    } else if (datePreset === "month") {
-      dateFrom = new Date();
-      dateFrom.setDate(1);
-      dateFrom.setHours(0, 0, 0, 0);
-      dateTo = new Date();
-    } else if (datePreset === "custom") {
-      const fromInput = document.getElementById("date-from").value;
-      const toInput = document.getElementById("date-to").value;
-      if (fromInput) dateFrom = new Date(fromInput);
-      if (toInput) dateTo = new Date(toInput + "T23:59:59");
-    }
-
-    return {
-      text,
-      tags,
-      dateFrom,
-      dateTo,
-      sortBy,
-      sortOrder,
-      limit: 100,
-    };
-  }
-  // Инициализация стрелочек для навигации по периодам
+  // Инициализация стрелочек для навигации
   initNavigationArrows() {
-    // Обработчики для недели
     const weekArrows = document.querySelectorAll("#week-view .nav-arrow");
     if (weekArrows.length >= 2) {
       weekArrows[0].addEventListener("click", () => this.navigateWeek(-1));
       weekArrows[1].addEventListener("click", () => this.navigateWeek(1));
     }
 
-    // Обработчики для месяца
     const monthArrows = document.querySelectorAll("#month-view .nav-arrow");
     if (monthArrows.length >= 2) {
       monthArrows[0].addEventListener("click", () => this.navigateMonth(-1));
@@ -659,10 +1159,9 @@ export class ViewManager {
     }
   }
 
-  // Навигация по неделям
   navigateWeek(direction) {
     if (!this.currentWeekStart) {
-      this.currentWeekStart = getWeekStart(new Date());
+      this.currentWeekStart = this.getWeekStart(new Date());
     }
 
     this.currentWeekStart.setDate(
@@ -671,7 +1170,6 @@ export class ViewManager {
     this.loadWeekView();
   }
 
-  // Навигация по месяцам
   navigateMonth(direction) {
     this.currentMonth += direction;
 
@@ -686,162 +1184,36 @@ export class ViewManager {
     this.loadMonthView();
   }
 
-  // Показ предложений поиска
-  async showSearchSuggestions() {
-    const suggestionsContainer = document.getElementById("search-suggestions");
-
-    try {
-      const popularTags = await db.getPopularTags(10);
-
-      if (popularTags.length > 0) {
-        const suggestionsHTML = `
-        <div class="suggestions">
-          <h4>Популярные теги:</h4>
-          <div class="tag-suggestions">
-            ${popularTags
-              .map(
-                ({ tag, count }) =>
-                  `<span class="tag-suggestion" data-tag="${tag}">${tag} (${count})</span>`
-              )
-              .join("")}
-          </div>
-        </div>
-      `;
-
-        suggestionsContainer.innerHTML = suggestionsHTML;
-
-        // Добавляем обработчики клика на теги
-        suggestionsContainer
-          .querySelectorAll(".tag-suggestion")
-          .forEach((tagEl) => {
-            tagEl.addEventListener("click", (e) => {
-              const tag = e.target.dataset.tag;
-              document.getElementById("search-input").value = tag;
-              this.performSearch(tag);
-            });
-          });
+  setupEventListeners() {
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case "1":
+            e.preventDefault();
+            this.switchView("today");
+            break;
+          case "2":
+            e.preventDefault();
+            this.switchView("week");
+            break;
+          case "3":
+            e.preventDefault();
+            this.switchView("month");
+            break;
+          case "4":
+            e.preventDefault();
+            this.switchView("year");
+            break;
+          case "f":
+            e.preventDefault();
+            this.switchView("search");
+            break;
+        }
       }
-    } catch (error) {
-      console.error("Ошибка загрузки предложений:", error);
-    }
-  }
-
-  // Отображение результатов поиска (улучшенная версия)
-  displaySearchResults(notes, query) {
-    const searchResults = document.getElementById("search-results-list");
-    const suggestionsContainer = document.getElementById("search-suggestions");
-
-    // Скрываем предложения
-    suggestionsContainer.innerHTML = "";
-
-    if (notes.length === 0) {
-      searchResults.innerHTML = `
-      <div class="no-results">
-        <p>По запросу <strong>"${this.escapeHtml(
-          query
-        )}"</strong> ничего не найдено</p>
-        <p>Попробуйте:</p>
-        <ul>
-          <li>Упростить запрос</li>
-          <li>Проверить правильность написания</li>
-          <li>Использовать другие ключевые слова</li>
-        </ul>
-      </div>
-    `;
-      return;
-    }
-
-    const resultsHTML = `
-    <div class="search-results-header">
-      <p>Найдено записей: <strong>${
-        notes.length
-      }</strong> по запросу <strong>"${this.escapeHtml(query)}"</strong></p>
-    </div>
-    <div class="search-results-list">
-      ${notes.map((note) => this.createSearchResultHTML(note)).join("")}
-    </div>
-  `;
-
-    searchResults.innerHTML = resultsHTML;
-  }
-
-  // Создание HTML для результата поиска с подсветкой
-  createSearchResultHTML(note) {
-    const date = new Date(note.date);
-    const dateString = date.toLocaleDateString("ru-RU");
-    const timeString = date.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
     });
 
-    // Используем подсвеченный контент, если он есть
-    const content = note.highlightedContent || this.escapeHtml(note.content);
-
-    const tagsHtml =
-      note.tags.length > 0
-        ? `<div class="note-tags">${note.tags
-            .map((tag) =>
-              note.highlightedTags
-                ? note.highlightedTags.find((ht) => ht.includes(tag)) || tag
-                : tag
-            )
-            .join(" ")}</div>`
-        : "";
-
-    return `
-    <div class="search-result-item note-item" data-note-id="${note.id}">
-      <div class="note-date">${dateString} ${timeString}</div>
-      <div class="note-content">${content}</div>
-      ${tagsHtml}
-    </div>
-  `;
-  }
-
-  // Очистка поиска
-  clearSearch() {
-    document.getElementById("search-input").value = "";
-    document.getElementById("tags-filter").value = "";
-    document.getElementById("date-from").value = "";
-    document.getElementById("date-to").value = "";
-    document.getElementById("date-range-preset").value = "";
-    document.getElementById("sort-by").value = "date";
-    document.getElementById("sort-order").value = "desc";
-
-    const searchResults = document.getElementById("search-results-list");
-    searchResults.innerHTML = "<p>Введите поисковый запрос</p>";
-
-    this.showSearchSuggestions();
-  }
-
-  // Вспомогательные функции
-  formatDate(date) {
-    return date.toLocaleDateString("ru-RU");
-  }
-
-  formatDayHeader(dateString) {
-    const date = new Date(dateString);
-    const dayNames = [
-      "Воскресенье",
-      "Понедельник",
-      "Вторник",
-      "Среда",
-      "Четверг",
-      "Пятница",
-      "Суббота",
-    ];
-    return `${dayNames[date.getDay()]}, ${this.formatDate(date)}`;
-  }
-
-  escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // Обновление списка последних записей (для вызова из index.js)
-  async updateRecentNotes() {
-    if (this.currentView === "today") {
-      await this.loadTodayView();
-    }
+    console.log(
+      "Настроены клавиатурные сокращения: Ctrl+1-4 для переключения видов, Ctrl+F для поиска"
+    );
   }
 }
