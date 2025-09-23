@@ -22,7 +22,8 @@ module.exports = (env, argv) => {
       // publicPath важен для корректной работы роутинга в SPA.
       // Для Netlify/Vercel оставляем '/', для GitHub Pages нужно будет
       // указать '/<repo-name>/', если проект не в корневом домене.
-      publicPath: "/",
+      publicPath:
+        process.env.NODE_ENV === "production" ? "/time-archive/" : "/",
       clean: true,
     },
 

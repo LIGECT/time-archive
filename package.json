@@ -6,7 +6,9 @@
     "start": "webpack serve --mode=development",
     "build": "webpack --mode=production",
     "build:stats": "webpack --mode production --json > dist/stats.json",
-    "analyze": "webpack-bundle-analyzer dist/stats.json"
+    "analyze": "webpack-bundle-analyzer dist/stats.json",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "repository": {
     "type": "git",
@@ -18,13 +20,14 @@
   "bugs": {
     "url": "https://github.com/LIGECT/time-archive/issues"
   },
-  "homepage": "https://github.com/LIGECT/time-archive#readme",
+  "homepage": "https://github.com/LIGECT/time-archive",
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/preset-env": "^7.28.3",
     "babel-loader": "^10.0.0",
     "copy-webpack-plugin": "^12.0.2",
     "css-loader": "^7.1.2",
+    "gh-pages": "^6.3.0",
     "html-webpack-plugin": "^5.6.4",
     "style-loader": "^4.0.0",
     "webpack": "^5.101.3",
