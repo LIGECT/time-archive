@@ -1,0 +1,1674 @@
+/*
+ * style.css - Таблица стилей для твоего личного ада.
+ * Здесь мы делаем вид, что можем упорядочить хаос.
+ */
+
+/* 1. Глобальные переменные и сброс говно-стилей браузера */
+:root {
+  --bg-color: #1a1a1a;
+  --primary-color: #2b2b2b;
+  --secondary-color: #404040;
+  --font-color: #cccccc;
+  --accent-color: #007bff; /* Единственное яркое пятно в этом царстве уныния */
+  --border-color: #555;
+  --danger-color: #dc3545;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--font-color);
+  line-height: 1.6;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+}
+
+/* 2. Основные контейнеры и лэйаут */
+#app-container {
+  width: 100%;
+  max-width: 1200px; /* Чтобы на мониторе 4K не разъезжалось на всю степь */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  width: 100%;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+main {
+  flex-grow: 1; /* Занимает всё оставшееся место */
+  overflow-y: auto; /* Если контента будет дохуя, появится скролл */
+}
+
+/* Скрываем все "виды", кроме активного. JS будет рулить этим. */
+[data-view-content][hidden] {
+  display: none;
+}
+
+/* 3. Навигация. Flexbox, как ты и просил. */
+#main-nav {
+  display: flex;
+  flex-wrap: wrap; /* На телефонах кнопки перенесутся, а не вылезут за экран */
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+}
+.nav-button {
+  background-color: var(--primary-color);
+  color: var(--font-color);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.2s ease;
+}
+
+.nav-button:hover {
+  background-color: var(--secondary-color);
+}
+
+.nav-button.active {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+  font-weight: bold;
+}
+
+/* 4. Вид "Сегодня". Вот тут Grid для десктопа и Flex для мобилки. */
+#today-view {
+  display: grid;
+  gap: 1.5rem;
+  /* По умолчанию одна колонка - для мобилок заебись */
+  grid-template-columns: 1fr;
+}
+
+/* А вот и магия адаптивности. Если экран шире 768px - делаем две колонки. */
+@media (min-width: 768px) {
+  #today-view {
+    grid-template-columns: 1fr 1fr; /* Две равные колонки */
+  }
+}
+
+.note-editor,
+.recent-notes,
+.view-header {
+  background-color: var(--primary-color);
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+/* 5. Форма для страданий (добавления записей) */
+#new-note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#new-note-form h3 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+textarea,
+input[type="text"],
+input[type="search"] {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: var(--secondary-color);
+  border: 1px solid var(--border-color);
+  color: var(--font-color);
+  border-radius: 5px;
+  resize: vertical; /* Разрешаем менять высоту только textarea */
+}
+
+textarea:focus,
+input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+#save-note-btn {
+  padding: 0.75rem;
+  background-color: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.download-button:hover,
+#save-note-btn:hover {
+  opacity: 0.9;
+}
+
+/* 6. Стили для остальных "видов" (неделя, месяц, год) */
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.nav-arrow {
+  background: none;
+  border: none;
+  color: var(--font-color);
+  font-size: 2rem;
+  cursor: pointer;
+}
+.export-buttons-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Календари. Тут Grid - сам бог велел. */
+#month-calendar-grid,
+#year-calendar-grid {
+  display: grid;
+  gap: 5px;
+}
+
+#month-calendar-grid {
+  /* 7 колонок для дней недели */
+  grid-template-columns: repeat(7, 1fr);
+}
+
+#year-calendar-grid {
+  /* 12 колонок для месяцев */
+  grid-template-columns: repeat(12, 1fr);
+}
+
+/* Сюда будешь добавлять стили для ячеек календаря, когда допишешь JS */
+#month-calendar-grid > div,
+#year-calendar-grid > div {
+  background-color: var(--secondary-color);
+  aspect-ratio: 1 / 1; /* Делаем ячейки квадратными */
+  border-radius: 3px;
+}
+
+/* === СТИЛИ ДЛЯ ВИДА "СЕГОДНЯ" === */
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #888;
+}
+
+.empty-state p:first-child {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.notes-header h4 {
+  color: var(--font-color);
+  margin: 0;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.note-item {
+  background-color: var(--secondary-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.note-item:hover {
+  border-color: var(--accent-color);
+  background-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.note-time {
+  font-weight: bold;
+}
+
+.note-id {
+  color: var(--accent-color);
+  font-family: monospace;
+}
+
+.note-content {
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+  word-wrap: break-word;
+}
+
+.content-text.truncated {
+  position: relative;
+}
+
+.note-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--accent-color);
+}
+
+.note-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.note-item:hover .note-actions,
+.note-item:focus-within .note-actions {
+  opacity: 1;
+}
+
+.note-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
+  color: var(--font-color);
+  padding: 0.2rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.note-action-btn:hover {
+  background-color: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
+.copy-btn:hover {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.delete-btn:hover {
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.expand-note-btn {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+  display: block;
+}
+
+.expand-note-btn:hover {
+  color: var(--font-color);
+  text-decoration: none;
+}
+
+.yesterday-notes {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--border-color);
+}
+
+.yesterday-notes h4 {
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.yesterday-notes .note-item {
+  opacity: 0.7;
+}
+
+.error-message {
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--danger-color);
+  border-radius: 8px;
+  color: #fff;
+}
+
+.error-message button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #fff;
+  color: var(--danger-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Анимация появления записей */
+.note-item {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Активные состояния навигации */
+.nav-button.active {
+  position: relative;
+}
+
+.nav-button.active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--accent-color);
+}
+
+/* Мобильные стили */
+@media (max-width: 768px) {
+  .note-actions {
+    opacity: 1; /* На мобилках показываем всегда */
+  }
+
+  .note-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .note-action-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
+}
+#save-note-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.download-button:disabled,
+.export-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* === СТИЛИ ДЛЯ НЕДЕЛЬНОГО ВИДА === */
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.week-day {
+  background-color: var(--primary-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 200px;
+}
+
+.week-day.has-notes {
+  border-color: var(--accent-color);
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.day-header h4 {
+  font-size: 0.9rem;
+  margin: 0;
+  color: var(--font-color);
+}
+
+.day-date {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.notes-count {
+  background-color: var(--accent-color);
+  color: #fff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.compact-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background-color: var(--secondary-color);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.compact-time {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.compact-content {
+  line-height: 1.3;
+}
+
+.compact-tags {
+  color: #888;
+  font-size: 0.7rem;
+}
+
+.no-notes {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+}
+
+.week-summary {
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--primary-color);
+  border-radius: 8px;
+}
+
+/* === СТИЛИ ДЛЯ МЕСЯЧНОГО КАЛЕНДАРЯ === */
+
+.month-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 2rem;
+  background-color: var(--border-color);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.calendar-day-header {
+  background-color: var(--primary-color);
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.calendar-day {
+  background-color: var(--secondary-color);
+  min-height: 80px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.calendar-day.empty {
+  background-color: var(--bg-color);
+}
+
+.calendar-day.today {
+  background-color: rgba(0, 123, 255, 0.2);
+  border: 2px solid var(--accent-color);
+}
+
+.calendar-day.has-notes:hover {
+  background-color: var(--accent-color);
+  color: #fff;
+  cursor: pointer;
+  transform: scale(1.05);
+}
+
+.calendar-day.low-activity {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.calendar-day.medium-activity {
+  background-color: rgba(0, 123, 255, 0.3);
+}
+
+.calendar-day.high-activity {
+  background-color: rgba(0, 123, 255, 0.5);
+  color: #fff;
+}
+
+.day-number {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.notes-indicator {
+  background-color: var(--accent-color);
+  color: #fff;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  align-self: flex-end;
+  margin-top: auto;
+}
+
+.month-stats {
+  background-color: var(--primary-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.month-stats h4 {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--secondary-color);
+  border-radius: 6px;
+}
+
+.stat-number {
+  display: block;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+/* === СТИЛИ ДЛЯ ГОДОВОГО ВИДА === */
+
+.year-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.year-month {
+  background-color: var(--primary-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.year-month:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
+  border-color: var(--accent-color);
+}
+
+.month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.month-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.month-number {
+  background-color: var(--accent-color);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.month-count {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--accent-color);
+  margin-bottom: 1rem;
+}
+
+.month-bar {
+  background-color: var(--secondary-color);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.month-bar-fill {
+  background: linear-gradient(90deg, var(--accent-color), #00d4ff);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.year-month.low-activity .month-count {
+  color: #28a745;
+}
+
+.year-month.medium-activity .month-count {
+  color: #ffc107;
+}
+
+.year-month.high-activity .month-count {
+  color: #fd7e14;
+}
+
+.year-month.very-high-activity .month-count {
+  color: #dc3545;
+}
+
+.year-summary {
+  background-color: var(--primary-color);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.year-summary h3 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--font-color);
+}
+
+.year-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.year-stat {
+  text-align: center;
+  padding: 1.5rem;
+  background-color: var(--secondary-color);
+  border-radius: 8px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #888;
+  margin-top: 0.5rem;
+}
+
+.activity-chart {
+  margin-top: 2rem;
+}
+
+.activity-chart h4 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.chart-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 150px;
+  padding: 1rem;
+  background-color: var(--secondary-color);
+  border-radius: 8px;
+  gap: 0.5rem;
+}
+
+.chart-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.bar-fill {
+  background: linear-gradient(to top, var(--accent-color), #00d4ff);
+  width: 100%;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.3s ease;
+}
+
+.bar-label {
+  font-size: 0.7rem;
+  color: #888;
+  margin-top: 0.5rem;
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+}
+
+/* === МОДАЛЬНОЕ ОКНО === */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--primary-color);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--font-color);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: var(--font-color);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.day-notes-list {
+  margin-top: 1rem;
+}
+
+/* === АДАПТИВНОСТЬ === */
+
+@media (max-width: 768px) {
+  .week-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .month-calendar-grid {
+    gap: 1px;
+    padding: 1px;
+  }
+
+  .calendar-day {
+    min-height: 60px;
+    padding: 0.25rem;
+  }
+
+  .year-calendar-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .year-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-bars {
+    height: 100px;
+  }
+
+  .bar-label {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .year-calendar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .year-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === СТИЛИ ДЛЯ ПОИСКА === */
+.search-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.search-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.search-header h3 {
+  color: var(--font-color);
+  margin-bottom: 0.5rem;
+}
+
+.search-header p {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.search-input-container {
+  margin-bottom: 2rem;
+}
+
+#search-input {
+  width: 100%;
+  font-size: 1.2rem;
+  padding: 1rem;
+  background-color: var(--secondary-color);
+  border: 2px solid var(--border-color);
+  color: var(--font-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+#search-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.search-hints {
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.search-hints small {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+/* Подсказки поиска */
+.search-suggestions {
+  background-color: var(--primary-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-color);
+}
+
+.suggestions h5 {
+  color: var(--font-color);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.tag-suggestion {
+  background-color: var(--secondary-color);
+  color: var(--font-color);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 0.75rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tag-suggestion:hover {
+  background-color: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
+.tag-count {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.search-examples {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.example-queries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.example-query {
+  background: linear-gradient(135deg, var(--accent-color), #0056b3);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.example-query:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Состояния поиска */
+.search-placeholder,
+.search-loading,
+.search-error {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #888;
+  background-color: var(--primary-color);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.search-loading {
+  color: var(--accent-color);
+}
+
+.search-error {
+  color: var(--danger-color);
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.retry-button {
+  background-color: var(--danger-color);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+/* Результаты поиска */
+.search-results-header {
+  background-color: var(--primary-color);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+.search-results-header h4 {
+  color: var(--accent-color);
+  margin-bottom: 0.5rem;
+}
+
+.search-results-header p {
+  color: #888;
+  margin: 0;
+}
+
+.search-day-group {
+  margin-bottom: 2rem;
+}
+
+.search-day-header {
+  background-color: var(--secondary-color);
+  color: var(--font-color);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-left: 4px solid var(--accent-color);
+}
+
+.search-day-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-result-item {
+  background-color: var(--primary-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.search-result-item:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+}
+
+.search-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.search-result-time {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.search-result-id {
+  color: #888;
+  font-family: monospace;
+  background-color: var(--secondary-color);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.search-result-content {
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+  word-wrap: break-word;
+  color: var(--font-color);
+}
+
+.search-result-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.search-result-tags span {
+  background-color: var(--secondary-color);
+  color: var(--accent-color);
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Подсветка найденного текста */
+mark {
+  background: linear-gradient(120deg, #ffff00, #ffd700);
+  color: #000;
+  padding: 0.1rem 0.2rem;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* Отсутствие результатов */
+.no-results {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background-color: var(--primary-color);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.no-results h4 {
+  color: var(--font-color);
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.search-tips {
+  background-color: var(--secondary-color);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  text-align: left;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.search-tips h5 {
+  color: var(--accent-color);
+  margin-bottom: 1rem;
+}
+
+.search-tips ul {
+  color: #888;
+  line-height: 1.6;
+}
+
+.search-tips li {
+  margin-bottom: 0.5rem;
+}
+
+.search-tips code {
+  background-color: var(--accent-color);
+  color: #fff;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+/* Анимации */
+.search-result-item {
+  animation: searchResultSlideIn 0.3s ease-out;
+}
+
+@keyframes searchResultSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ... в конец файла src/style.css ... */
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filename {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 0.25rem;
+  word-break: break-all;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .search-container {
+    padding: 0.5rem;
+  }
+
+  #search-input {
+    font-size: 1rem;
+    padding: 0.75rem;
+  }
+
+  .tag-suggestions,
+  .example-queries {
+    justify-content: center;
+  }
+
+  .search-result-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-day-results {
+    gap: 0.75rem;
+  }
+
+  .search-result-item {
+    padding: 1rem;
+  }
+}
+
+/* === СТИЛИ ДЛЯ КНОПОК СКАЧИВАНИЯ === */
+
+/* === СТИЛИ ДЛЯ ЭКСПОРТА === */
+
+.export-button {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+.export-button:hover {
+  background: linear-gradient(135deg, #218838, #1ea085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.export-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  animation: exportPulse 1.5s infinite;
+}
+
+.export-button.compact {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+@keyframes exportPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.download-button {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.download-button:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.download-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  animation: downloadPulse 1.5s infinite;
+}
+
+.download-button.compact {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+/* Группы кнопок экспорта/скачивания */
+.export-buttons-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Обновляем контейнеры для групп кнопок */
+.week-controls,
+.month-controls,
+.year-controls {
+  background-color: var(--primary-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.notes-header {
+  gap: 1rem;
+}
+
+.notes-header h4 {
+  flex: 1;
+}
+
+/* Уведомления об экспорте */
+.export-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: var(--primary-color);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-width: 350px;
+  transform: translateX(400px);
+  opacity: 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.export-notification.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.export-notification.success {
+  border-color: #28a745;
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  color: #155724;
+}
+
+.export-notification.error {
+  border-color: #dc3545;
+  background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+  color: #721c24;
+}
+
+.notification-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.notification-text strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.notification-text p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+/* Дополнительные стили для уведомлений */
+.notification-text .filename {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+  font-family: monospace;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+/* Адаптивность для уведомлений */
+@media (max-width: 768px) {
+  .export-notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    transform: translateY(-100px);
+  }
+
+  .export-notification.show {
+    transform: translateY(0);
+  }
+}
+
+/* Анимация для кнопок скачивания во время процесса */
+@keyframes downloadPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .export-buttons-group {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .export-button,
+  .download-button {
+    width: 100%;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .notes-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  .notes-header h4 {
+    text-align: center;
+  }
+
+  .notes-header .export-buttons-group {
+    justify-content: center;
+  }
+
+  .week-controls,
+  .month-controls,
+  .year-controls {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .export-button.compact,
+  .download-button.compact {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .export-buttons-group {
+    gap: 0.4rem;
+  }
+}
+
+/* Улучшенная типографика для кнопок */
+.export-button,
+.download-button {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Фокус для accessibility */
+.export-button:focus,
+.download-button:focus {
+  outline: 2px solid rgba(0, 123, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.download-button:focus {
+  outline-color: rgba(0, 123, 255, 0.6);
+}
+
+/* === PWA СТИЛИ === */
+
+.install-pwa-button {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+}
+
+.install-pwa-button:hover {
+  background: linear-gradient(135deg, #e55a2b, #e8831a);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.update-notification {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  border-color: #17a2b8;
+  color: #fff;
+}
+
+.update-button {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.update-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Адаптация для установленного PWA */
+@media all and (display-mode: standalone) {
+  body {
+    /* Добавляем отступ сверху для статус-бара на iOS */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #main-nav {
+    /* Скрываем кнопку установки в standalone режиме */
+  }
+
+  .install-pwa-button {
+    display: none !important;
+  }
+}
+
+/* Стили для iPad */
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .install-pwa-button {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+/* iOS Safari специфичные стили */
+@supports (-webkit-appearance: none) {
+  .install-pwa-button {
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
