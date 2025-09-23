@@ -1,6 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const { InjectManifest } = require("workbox-webpack-plugin");
 const webpack = require("webpack");
 
@@ -53,7 +54,10 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.css$/,
-          use: ["style-loader", "css-loader"],
+          use: [
+            isProduction ? MiniCssExtractPlugin.loader : "style-loader",
+            "css-loader",
+          ],
         },
         {
           // Правило для обработки изображений и других ассетов
@@ -98,6 +102,12 @@ module.exports = (env, argv) => {
             /^manifest.*\.js$/,
           ],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+        }),
+      // MiniCssExtractPlugin для извлечения CSS в отдельные файлы в продакшене
+      isProduction &&
+        new MiniCssExtractPlugin({
+          filename: "[name].[contenthash].css",
+          chunkFilename: "[id].[contenthash].css",
         }),
     ].filter(Boolean), // .filter(Boolean) для удаления false значений из массива плагинов
 
