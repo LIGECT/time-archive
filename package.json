@@ -20,7 +20,7 @@
   "bugs": {
     "url": "https://github.com/LIGECT/time-archive/issues"
   },
-  "homepage": "https://github.com/LIGECT/time-archive",
+  "homepage": "https://LIGECT.github.io/time-archive",
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/preset-env": "^7.28.3",
