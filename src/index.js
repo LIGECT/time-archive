@@ -2,10 +2,8 @@ import "./style.css";
 import { db } from "./db.js";
 import { ViewManager } from "./views.js";
 
-// === PWA И SERVICE WORKER РЕГИСТРАЦИЯ ===
-
-// Упрощённая регистрация с Workbox
-if ("serviceWorker" in navigator) {
+// Регистрируем Service Worker только в production-сборке, чтобы избежать варнингов в dev-режиме
+if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
   window.addEventListener("load", async () => {
     try {
       // Регистрируем SW, который сгенерировал Workbox

@@ -133,6 +133,17 @@ class TimeArchiveDB extends Dexie {
     }
   }
 
+  // Удаление записи по ID
+  async deleteNote(noteId) {
+    try {
+      await this.notes.delete(noteId);
+      console.log(`Запись с ID: ${noteId} удалена`);
+    } catch (error) {
+      console.error(`Ошибка при удалении записи с ID ${noteId}:`, error);
+      throw error;
+    }
+  }
+
   // === БАЗОВЫЕ МЕТОДЫ ДЛЯ РАБОТЫ С ДИАПАЗОНАМИ ДАТ ===
 
   // Основной метод получения записей по диапазону дат

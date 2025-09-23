@@ -261,7 +261,6 @@ input:focus {
   align-items: center;
   margin-bottom: 0.75rem;
   font-size: 0.85rem;
-  color: #888;
 }
 
 .note-time {
@@ -279,12 +278,80 @@ input:focus {
   word-wrap: break-word;
 }
 
+.content-text.truncated {
+  position: relative;
+}
+
 .note-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
   font-size: 0.8rem;
   color: var(--accent-color);
+}
+
+.note-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.note-item:hover .note-actions,
+.note-item:focus-within .note-actions {
+  opacity: 1;
+}
+
+.note-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
+  color: var(--font-color);
+  padding: 0.2rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.note-action-btn:hover {
+  background-color: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
+.copy-btn:hover {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.delete-btn:hover {
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.expand-note-btn {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+  display: block;
+}
+
+.expand-note-btn:hover {
+  color: var(--font-color);
+  text-decoration: none;
 }
 
 .yesterday-notes {
@@ -350,6 +417,24 @@ input:focus {
   right: 0;
   height: 2px;
   background-color: var(--accent-color);
+}
+
+/* Мобильные стили */
+@media (max-width: 768px) {
+  .note-actions {
+    opacity: 1; /* На мобилках показываем всегда */
+  }
+
+  .note-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .note-action-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
 }
 #save-note-btn:disabled {
   opacity: 0.6;

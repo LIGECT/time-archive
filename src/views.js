@@ -207,7 +207,10 @@ export class ViewManager {
       return;
     }
 
-    const notesHTML = notes.map((note) => this.createNoteHTML(note)).join("");
+    // Используем умное сокращение до 200 символов
+    const notesHTML = notes
+      .map((note) => this.createNoteHTML(note, 200))
+      .join("");
 
     container.innerHTML = `
       <div class="notes-header">
@@ -228,7 +231,13 @@ export class ViewManager {
 
     console.log(`Отображено ${notes.length} записей`);
 
-    // Обработчик для копирования
+    // Добавляем все обработчики
+    this.attachTodayHandlers();
+  }
+
+  // Новый метод для всех обработчиков вида "Сегодня"
+  attachTodayHandlers() {
+    // Обработчики экспорта
     const exportTodayBtn = document.getElementById("export-today-btn");
     if (exportTodayBtn) {
       exportTodayBtn.addEventListener("click", async () => {
@@ -243,7 +252,6 @@ export class ViewManager {
       });
     }
 
-    // Обработчик для скачивания
     const downloadTodayBtn = document.getElementById("download-today-btn");
     if (downloadTodayBtn) {
       downloadTodayBtn.addEventListener("click", async () => {
@@ -257,6 +265,152 @@ export class ViewManager {
         downloadTodayBtn.textContent = "📥 Скачать";
       });
     }
+
+    // Обработчики действий с записями (делегирование событий)
+    const container = document.getElementById("recent-notes-list");
+    if (!container) return;
+
+    container.addEventListener("click", (e) => {
+      const button = e.target.closest("button[data-note-id]");
+      if (!button) return;
+
+      const noteId = button.dataset.noteId;
+
+      // Раскрытие текста
+      if (button.classList.contains("expand-note-btn")) {
+        this.expandNoteContent(noteId);
+      }
+
+      // Копирование записи
+      if (button.classList.contains("copy-btn")) {
+        this.copyNoteToClipboard(parseInt(noteId, 10));
+      }
+
+      // Редактирование (будущий функционал)
+      if (button.classList.contains("edit-btn")) {
+        this.editNote(parseInt(noteId, 10));
+      }
+
+      // Удаление
+      if (button.classList.contains("delete-btn")) {
+        this.deleteNote(parseInt(noteId, 10));
+      }
+    });
+  }
+
+  // Метод раскрытия полного контента записи
+  expandNoteContent(noteId) {
+    const noteContent = document.querySelector(
+      `.note-item[data-note-id="${noteId}"] .note-content`
+    );
+    const contentText = noteContent?.querySelector(".content-text");
+    const expandBtn = noteContent?.querySelector(".expand-note-btn");
+
+    if (!noteContent || !contentText || !expandBtn) {
+      console.error("Элементы для раскрытия не найдены:", noteId);
+      return;
+    }
+
+    const fullContent = noteContent.dataset.fullContent;
+
+    if (fullContent) {
+      // Заменяем сокращённый текст на полный
+      contentText.innerHTML = fullContent;
+      contentText.classList.remove("truncated");
+
+      // Удаляем кнопку раскрытия
+      expandBtn.remove();
+
+      console.log(`Раскрыт полный текст записи #${noteId}`);
+    }
+  }
+
+  // Копирование отдельной записи в буфер обмена
+  async copyNoteToClipboard(noteId) {
+    try {
+      const note = await db.notes.get(noteId);
+
+      if (!note) {
+        console.error("Запись не найдена:", noteId);
+        return;
+      }
+
+      const noteText = this.formatSingleNoteForCopy(note);
+      const result = await this.copyToClipboard(noteText);
+
+      // Показываем уведомление
+      this.showExportNotification(
+        {
+          success: result.success,
+          count: 1,
+          period: `запись #${noteId}`,
+          error: result.error,
+        },
+        false
+      );
+    } catch (error) {
+      console.error("Ошибка копирования записи:", error);
+    }
+  }
+
+  // Форматирование одной записи для копирования
+  formatSingleNoteForCopy(note) {
+    const date = new Date(note.date).toLocaleString("ru-RU");
+    const tags = note.tags.length > 0 ? ` ${note.tags.join(" ")}` : "";
+
+    return `📝 Запись #${note.id} от ${date}\n\n${note.content}${tags}`;
+  }
+
+  // Удаление записи
+  async deleteNote(noteId) {
+    const confirmMessage = `Точно удалить запись #${noteId}?\n\nЭто действие необратимо!`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      await db.deleteNote(noteId);
+
+      // Обновляем текущий вид
+      await this.updateCurrentView();
+
+      console.log(`Запись #${noteId} удалена`);
+
+      // Показываем кастомное уведомление
+      const notification = document.createElement("div");
+      notification.className = "export-notification success";
+      notification.innerHTML = `
+        <div class="notification-content">
+          <span class="notification-icon">🗑️</span>
+          <div class="notification-text">
+            <strong>Запись удалена</strong>
+            <p>Запись #${noteId} была успешно удалена.</p>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.classList.add("show"), 10);
+      setTimeout(() => {
+        notification.classList.remove("show");
+        setTimeout(() => {
+          if (notification.parentNode) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
+    } catch (error) {
+      console.error("Ошибка удаления записи:", error);
+      alert(`Не удалось удалить запись #${noteId}: ${error.message}`);
+    }
+  }
+
+  // Редактирование записи (заглушка для будущего функционала)
+  async editNote(noteId) {
+    console.log("Редактирование записи:", noteId);
+    alert(
+      `Редактирование записи #${noteId}\n\nФункция будет добавлена в следующих версиях.`
+    );
   }
 
   // Показ записей за вчера (дополнительно)
@@ -277,8 +431,8 @@ export class ViewManager {
     container.insertAdjacentHTML("beforeend", yesterdayHTML);
   }
 
-  // Создание HTML для одной записи
-  createNoteHTML(note) {
+  // Создание HTML для одной записи с умным отображением
+  createNoteHTML(note, maxLength = 200) {
     const date = new Date(note.date);
     const now = new Date();
 
@@ -302,10 +456,20 @@ export class ViewManager {
         ? `<div class="note-tags">${note.tags.join(" ")}</div>`
         : "";
 
-    const content =
-      note.content.length > 200
-        ? note.content.substring(0, 200) + "..."
-        : note.content;
+    // Умное сокращение с возможностью раскрытия
+    const shouldTruncate = maxLength && note.content.length > maxLength;
+    const displayContent = shouldTruncate
+      ? note.content.substring(0, maxLength) + "..."
+      : note.content;
+
+    // Сохраняем полный контент в data-атрибуте для раскрытия
+    const fullContentAttr = shouldTruncate
+      ? `data-full-content="${this.escapeHtml(note.content)}"`
+      : "";
+
+    const expandButton = shouldTruncate
+      ? `<button class="expand-note-btn" data-note-id="${note.id}" title="Показать полный текст">Показать полностью</button>`
+      : "";
 
     return `
       <div class="note-item" data-note-id="${
@@ -314,8 +478,26 @@ export class ViewManager {
         <div class="note-header">
           <span class="note-time">${timeString}</span>
           <span class="note-id">#${note.id}</span>
+          <div class="note-actions">
+            <button class="note-action-btn copy-btn" data-note-id="${
+              note.id
+            }" title="Скопировать запись">📋</button>
+            <button class="note-action-btn edit-btn" data-note-id="${
+              note.id
+            }" title="Редактировать">✏️</button>
+            <button class="note-action-btn delete-btn" data-note-id="${
+              note.id
+            }" title="Удалить">🗑️</button>
+          </div>
         </div>
-        <div class="note-content">${this.escapeHtml(content)}</div>
+        <div class="note-content" ${fullContentAttr}>
+          <div class="content-text ${
+            shouldTruncate ? "truncated" : ""
+          }" data-note-id="${note.id}">
+            ${this.escapeHtml(displayContent)}
+          </div>
+          ${expandButton}
+        </div>
         ${tagsHTML}
       </div>
     `;

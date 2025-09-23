@@ -2,14 +2,11 @@
   "name": "time-archive",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "start": "webpack serve",
+    "start": "webpack serve --mode=development",
     "build": "webpack --mode=production",
-    "build:dev": "webpack --mode=development",
     "build:stats": "webpack --mode production --json > dist/stats.json",
-    "analyze": "webpack-bundle-analyzer dist/stats.json",
-    "sw:generate": "workbox generateSW"
+    "analyze": "webpack-bundle-analyzer dist/stats.json"
   },
   "repository": {
     "type": "git",
@@ -25,7 +22,6 @@
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/preset-env": "^7.28.3",
-    "@babel/preset-react": "^7.27.1",
     "babel-loader": "^10.0.0",
     "copy-webpack-plugin": "^12.0.2",
     "css-loader": "^7.1.2",
